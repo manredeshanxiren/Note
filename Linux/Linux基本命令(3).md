@@ -203,3 +203,26 @@ Windows GUI：
 
 
 
+## 7.file命令：
+
+> - 功能说明：辨识文件类型。
+>
+> - 语法： file [选项] 文件或目录 .... 
+
+### 7.1常用选项:
+
+> - -c 详细显示指令执行过程，便于排错或分析程序执行的情形。
+>
+> - -z 尝试去解读压缩文件的内容  
+
+### 7.2代码演示:
+
+```apl
+[root@iZ2ze8prly56kg8in4hqa2Z ~]# file my.txt  //文本
+my.txt: ASCII text
+[root@iZ2ze8prly56kg8in4hqa2Z ~]# file test.c  //C的源程序
+test.c: C source, ASCII text
+[root@iZ2ze8prly56kg8in4hqa2Z mydir]# file temp.tgz  //tgz的压缩包
+temp.tgz: gzip compressed data, last modified: Wed Dec 14 12:51:59 2022, from Unix, original size 10240
+```
+
