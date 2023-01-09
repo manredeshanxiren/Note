@@ -107,3 +107,11 @@ curl -sLf https://gitee.com/HGtz2222/VimForCpp/raw/master/install.sh -o ./instal
 拓展:
 
 普通用户无法`sudo`的解决:
+
+> ①首先我们添加写的权限:`chmod u+w /etc/sudoers`
+>
+> ②然后使用vim打开此文件`vim /etc/sudoers`
+>
+> ③在`root  ALL=(ALL) ALL`后加上 `用户名   ALL=(ALL)  ALL`然后保存后退出
+>
+> ④最后将写的权限去掉:`chmod u-w /etc/sudoers`
