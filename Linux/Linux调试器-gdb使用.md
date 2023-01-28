@@ -39,7 +39,7 @@
 > `disable breakpoints`：禁用断点
 > `enable breakpoints`：启用断点
 > `info(或i) breakpoints`：参看当前设置了哪些断点
-> `display` 变量名：跟踪查看一个变量，每次停下来都显示它的值
+> `display（内置类型，结构体自定义类型，stl）` 变量名：跟踪查看一个变量，每次停下来都显示它的值
 > `undisplay`：取消对先前设置的那些变量的跟踪
 > `until X行号`：跳至X行
 > `breaktrace(或bt)`：查看各级函数调用及参数
