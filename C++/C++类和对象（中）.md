@@ -14,7 +14,7 @@
 
 ## Ⅱ.构造函数：
 
-### Ⅱ.Ⅰ概念：
+### Ⅱ. Ⅰ概念：
 
 > 对于以下的一个Data类，我们可以通过Init函数来给对象设置日期，但是如果每次创建对象的时候都去调用该方法去实现日期的初始化，那么是有点麻烦的，因此C++设计了**<u>构造函数</u>**。
 >
@@ -51,7 +51,7 @@
 > }
 > ```
 
-### Ⅱ.Ⅱ特性：
+### Ⅱ. Ⅱ特性：
 
 > **<u>构造函数</u>**并不是开空间创建对象，而是初始化对象。
 >
@@ -240,11 +240,11 @@
 
 ## Ⅲ.析构函数：
 
-### Ⅲ.Ⅰ概念：
+### Ⅲ. Ⅰ概念：
 
 > **<u>析构函数：</u>**与构造函数功能相反，析构函数不是完成对对象本身的销毁，局部对象销毁工作是由 编译器完成的。而对象在销毁时会自动调用析构函数，完成对象中资源的清理工作。
 
-### Ⅲ.Ⅱ特性：
+### Ⅲ. Ⅱ特性：
 
 > ①析构函数的函数名是在函数名前加上`~`。
 >
@@ -347,7 +347,7 @@
 
 ### Ⅳ.拷贝构造函数：
 
-### Ⅳ.Ⅰ概念：
+### Ⅳ. Ⅰ概念：
 
 > 在现实生活中，可能存在一个与你一样的自己，我们称其为双胞胎。那么我们在C++中创建对象的时候是否可以创建一个和已存在对象相同的对象呢？
 >
@@ -355,7 +355,7 @@
 >
 > <u>**拷贝构造函数：**</u>只有<u>**单个形参**</u>，该形参是对本类类型对象的<u>**引用(一般常用const修饰)**</u>，在用<u>**已存在的类类型对象创建新对象时由编译器自动调用**</u>。
 
-### Ⅳ.Ⅱ特征：
+### Ⅳ. Ⅱ特征：
 
 > ①拷贝构造函数是<u>**构造函数的一个重载形式**</u>。
 >
@@ -372,7 +372,7 @@
 > 			_day = day;
 > 		}
 > 		//Date(Date d)   // 错误写法：编译报错，会引发无穷递归
->  	Date(const Date& d)   // 正确写法
+> 	Date(const Date& d)   // 正确写法
 > 		{
 > 			_year = d._year;
 > 			_month = d._month;
@@ -399,48 +399,48 @@
 > class Time
 > {
 > 	public:
->  	Time()
->  	{
->  		_hour = 1;
->  		_minute = 1;
->  		_second = 1;
+> 	Time()
+> 	{
+> 		_hour = 1;
+> 		_minute = 1;
+> 		_second = 1;
 > }
->  Time(const Time& t)
->  {
->  _hour = t._hour;
->  _minute = t._minute;
->  _second = t._second;
->  cout << "Time::Time(const Time&)" << endl;
->  }
+> Time(const Time& t)
+> {
+> _hour = t._hour;
+> _minute = t._minute;
+> _second = t._second;
+> cout << "Time::Time(const Time&)" << endl;
+> }
 > private:
->  int _hour;
->  int _minute;
->  int _second;
+> int _hour;
+> int _minute;
+> int _second;
 > };
 > class Date
 > {
 > private:
->  // 基本类型(内置类型)
->  int _year = 1970;
->  int _month = 1;
->  int _day = 1;
->  // 自定义类型
->  Time _t;
+> // 基本类型(内置类型)
+> int _year = 1970;
+> int _month = 1;
+> int _day = 1;
+> // 自定义类型
+> Time _t;
 > };
 > int main()
 > {
->  Date d1;
->     
->     // 用已经存在的d1拷贝构造d2，此处会调用Date类的拷贝构造函数
->     // 但Date类并没有显式定义拷贝构造函数，则编译器会给Date类生成一个默认的拷贝构
+> Date d1;
+> 
+>  // 用已经存在的d1拷贝构造d2，此处会调用Date类的拷贝构造函数
+>  // 但Date类并没有显式定义拷贝构造函数，则编译器会给Date类生成一个默认的拷贝构
 > 造函数
->  Date d2(d1);
->  return 0;
+> Date d2(d1);
+> return 0;
 > }
 > 
 > ```
 >
-> 注意：在编译器生成的默认拷贝构造函数中，内置类型是按照字节方式直接拷贝的，而自定 义类型是调用其拷贝构造函数完成拷贝的.
+> 注意：<u>**在编译器生成的默认拷贝构造函数中，内置类型是按照字节方式直接拷贝的，而自定 义类型是调用其拷贝构造函数完成拷贝的.**</u>
 >
 > ④编译器生成的默认拷贝构造函数已经可以完成字节序的值拷贝了，还需要自己显式实现吗？ 当然像日期类这样的类是没必要的。
 >
@@ -452,6 +452,8 @@
 >
 > ⑤拷贝构造函数典型调用场景：
 >
+> - 实现了析构函数的情况。
+>
 > - 使用已存在的对象创建新的对象。
 >
 > - 函数的参数类型为类类型对象。
@@ -459,3 +461,319 @@
 > - 函数的返回值为类类型对象。
 >
 >   <u>**为了提高程序效率，一般对象传参时，尽量使用引用类型，返回时根据实际场景，能用引用 尽量使用引用**</u>。
+
+## Ⅴ.赋值运算符重载：
+
+> ### Ⅴ. Ⅰ运算符重载：
+>
+> C++为了增强代码的可读性引入了运算符重载，运算符重载是<u>**具有特殊函数名的函数**</u>，也具有其 返回值类型，函数名字以及参数列表，其返回值类型与参数列表与普通的函数类似。
+>
+> 函数的名称：<u>**关键字`operator`后面接需要重载的运算符符号**</u>
+>
+> 函数原型：<u>**返回值类型 `operator`操作符(参数列表)**</u>
+>
+> <u>**注意：**</u>
+>
+> - 不能通过连接其他符号来创建新的操作符：比如operator@。
+>
+> - 重载操作符必须有一个类类型参数。
+>
+> - 用于内置类型的运算符，其含义不能改变，例如：内置的整型+，不能改变其含义。
+>
+> - 作为类成员函数重载时，其形参看起来比操作数数目少1，因为成员函数的第一个参数为隐 藏的this。
+>
+> - `.*   ::   sizeof    ?:   .` 注意以上5个运算符不能重载。这个经常在笔试选择题中出现。
+>
+>   
+>
+>   ```c++
+>   // 全局的operator==
+>   class Date
+>   { 
+>   public:
+>    Date(int year = 1900, int month = 1, int day = 1)
+>      {
+>           _year = year;
+>           _month = month;
+>           _day = day;
+>      }    
+>   //private:
+>    int _year;
+>    int _month;
+>    int _day;
+>   };
+>   // 这里会发现运算符重载成全局的就需要成员变量是公有的，那么问题来了，封装性如何保证？
+>   // 这里其实可以用我们后面学习的友元解决，或者干脆重载成成员函数。
+>   bool operator==(const Date& d1, const Date& d2)
+>   {
+>       return d1._year == d2._year
+>      && d1._month == d2._month
+>           && d1._day == d2._day;
+>   }
+>   void Test ()
+>   {
+>       Date d1(2018, 9, 26);
+>       Date d2(2018, 9, 27);
+>       cout<<(d1 == d2)<<endl;
+>   }
+>   
+>   ```
+>
+>   ```C++
+>   class Date
+>   { 
+>   public:
+>    Date(int year = 1900, int month = 1, int day = 1)
+>   {
+>           _year = year;
+>           _month = month;
+>           _day = day;
+>    }
+>       
+>       // bool operator==(Date* this, const Date& d2)
+>       // 这里需要注意的是，左操作数是this，指向调用函数的对象
+>       bool operator==(const Date& d2)
+>    {
+>           return _year == d2._year;
+>               && _month == d2._month
+>               && _day == d2._day;
+>    }
+>   private:
+>    int _year;
+>    int _month;
+>    int _day;
+>   };
+>   ```
+
+### Ⅴ. Ⅱ赋值运算符重载：
+
+> ①赋值运算符重载格式：
+>
+> - <u>**参数类型**</u>：const T&，传递引用可以提高传参效率。
+>
+> - <u>**返回值类型**</u>：T&，返回引用可以提高返回的效率，有返回值目的是为了支持连续赋值。
+>
+> - <u>**检测是否自己给自己赋值。**</u>
+>
+> - <u>**返回*this**</u> ：要复合连续赋值的含义。
+>
+>   ```C++
+>   class Date
+>   { 
+>   public :
+>    Date(int year = 1900, int month = 1, int day = 1)
+>      {
+>           _year = year;
+>           _month = month;
+>           _day = day;
+>      }
+>    
+>    Date (const Date& d)
+>      {
+>           _year = d._year;
+>           _month = d._month;
+>           _day = d._day;
+>      }
+>    
+>    Date& operator=(const Date& d)
+>    {
+>    if(this != &d)
+>          {
+>               _year = d._year;
+>               _month = d._month;
+>               _day = d._day;
+>          }
+>           
+>           return *this;
+>    }
+>   private:
+>       int _year ;
+>    	int _month ;
+>    	int _day ;
+>   };
+>   
+>   ```
+>
+>   ②<u>**赋值运算符只能重载成类的成员函数不能重载成全局函数。**</u>
+>
+>   ```C++
+>   class Date
+>   {
+>   public:
+>    Date(int year = 1900, int month = 1, int day = 1)
+>    {
+>    _year = year;
+>    _month = month;
+>    _day = day;
+>    }
+>    int _year;
+>    int _month;
+>    int _day;
+>   };
+>   // 赋值运算符重载成全局函数，注意重载成全局函数时没有this指针了，需要给两个参数
+>   Date& operator=(Date& left, const Date& right)
+>   {
+>    if (&left != &right)
+>    {
+>    left._year = right._year;
+>    left._month = right._month;
+>    left._day = right._day;
+>    }
+>    return left;
+>   }
+>   // 编译失败：
+>   // error C2801: “operator =”必须是非静态成员
+>   ```
+>
+>   <u>**原因：**</u>赋值运算符如果不显式实现，编译器会生成一个默认的。此时用户再在类外自己实现 一个全局的赋值运算符重载，就和编译器在类中生成的默认赋值运算符重载冲突了，故赋值 运算符重载只能是类的成员函数。
+>
+>   ③<u>**用户没有显式实现时，编译器会生成一个默认赋值运算符重载，以值的方式逐字节拷贝**</u>。注 意：内置类型成员变量是直接赋值的，而自定义类型成员变量需要调用对应类的赋值运算符 重载完成赋值。
+>
+>   ```c++
+>   class Time
+>   {
+>   public:
+>    Time()
+>    {
+>    	_hour = 1;
+>   	_minute = 1;
+>    	_second = 1;
+>    }
+>    Time& operator=(const Time& t)
+>    {
+>    if (this != &t)
+>    {
+>    	_hour = t._hour;
+>    	_minute = t._minute;
+>    	_second = t._second;
+>    }
+>    return *this;
+>    }
+>   private:
+>    	int _hour;
+>    	int _minute;
+>    	int _second;
+>   };
+>   class Date
+>   {
+>   private:
+>    	// 基本类型(内置类型)
+>    	int _year = 1970;
+>    	int _month = 1;
+>    	int _day = 1;
+>    // 自定义类型
+>    	Time _t;
+>   };
+>   int main()
+>   {
+>    	Date d1;
+>    	Date d2;
+>    	d1 = d2;
+>    	return 0;
+>   }
+>   
+>   ```
+>
+>   既然编译器生成的默认赋值运算符重载函数已经可以完成字节序的值拷贝了，我们就不需要再去生成了。
+>
+>   ```C++
+>   // 这里会发现下面的程序会崩溃掉？这里就需要我们以后讲的深拷贝去解决。
+>   typedef int DataType;
+>   class Stack
+>   {
+>   public:
+>    Stack(size_t capacity = 10)
+>    {
+>    	_array = (DataType*)malloc(capacity * sizeof(DataType));
+>    	if (nullptr == _array)
+>    	{
+>    		perror("malloc申请空间失败");
+>    		return;
+>    	}
+>        	_size = 0;
+>    		_capacity = capacity;
+>    }
+>    void Push(const DataType& data)
+>    {
+>    	// CheckCapacity();
+>    	_array[_size] = data;
+>    	_size++;
+>    }
+>    ~Stack()
+>    {
+>    	if (_array)
+>    	{
+>    		free(_array);
+>    		_array = nullptr;
+>    		_capacity = 0;
+>    		_size = 0;
+>    	}
+>    }
+>   	private:
+>    		DataType *_array;
+>    		size_t _size;
+>    		size_t _capacity;
+>   };
+>   int main()
+>   {
+>    	Stack s1;
+>    	s1.Push(1);
+>    	s1.Push(2);
+>    	s1.Push(3);
+>    	s1.Push(4);
+>    	Stack s2;
+>    	s2 = s1;
+>    	return 0;
+>   }
+>   
+>   ```
+>
+>   **<u>注意：</u>**如果类中未涉及到资源管理，赋值运算符是否实现都可以；一旦涉及到资源管理则必须要实现。
+
+### Ⅴ. Ⅲ 前置++和后置++重载：
+
+> ```c++
+> class Date
+> {
+> 	public:
+> 		Date(int year = 1900, int month = 1, int day = 1)
+> 		{
+>  			_year = year;
+>  			_month = month;
+>  			_day = day;
+>  		}
+>  		// 前置++：返回+1之后的结果
+>  		// 注意：this指向的对象函数结束后不会销毁，故以引用方式返回提高效率
+>  		Date& operator++()
+>  		{
+>  			_day += 1;
+>  			return *this;
+>  		}
+>  		// 后置++：
+>  		// 前置++和后置++都是一元运算符，为了让前置++与后置++形成能正确重载
+>  		// C++规定：后置++重载时多增加一个int类型的参数，但调用函数时该参数不用传递，编译器自动传递
+>  		// 注意：后置++是先使用后+1，因此需要返回+1之前的旧值，故需在实现时需要先将this保存一份，然后给this+1
+>  		// 而temp是临时对象，因此只能以值的方式返回，不能返回引用
+>  		Date operator++(int)
+>  		{
+>  			Date temp(*this);
+>  			_day += 1;
+> 			return temp;
+>  		}
+> 	private:
+>  		int _year;
+>  		int _month;
+>  		int _day;
+> };
+> int main()
+> {
+>  	Date d;
+>  	Date d1(2022, 1, 13);
+>  	d = d1++;    // d: 2022,1,13   d1:2022,1,14
+>  	d = ++d1;    // d: 2022,1,15   d1:2022,1,15
+>  	return 0;
+> }
+> ```
+>
+> 
+
