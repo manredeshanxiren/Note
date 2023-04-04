@@ -26,7 +26,7 @@
 > public:
 >  	void Init(int year, int month, int day)
 >  	{
->     	_year = year;
+>     		_year = year;
 >  		_month = month;
 >  		_day = day;
 >  	}
@@ -391,7 +391,7 @@
 > }
 > ```
 >
-> ![image-20230327135124078](C:\Users\jason\AppData\Roaming\Typora\typora-user-images\image-20230327135124078.png)
+> ![	](C:\Users\jason\AppData\Roaming\Typora\typora-user-images\image-20230327135124078.png)
 >
 > ③若未显式定义，编译器会生成默认的拷贝构造函数。 默认的拷贝构造函数对象按内存存储按 字节序完成拷贝，这种拷贝叫做浅拷贝，或者值拷贝。
 >
@@ -567,14 +567,14 @@
 >           _month = month;
 >           _day = day;
 >      }
->    
+>        
 >    Date (const Date& d)
 >      {
 >           _year = d._year;
 >           _month = d._month;
 >           _day = d._day;
 >      }
->    
+>        
 >    Date& operator=(const Date& d)
 >    {
 >    if(this != &d)
@@ -583,7 +583,7 @@
 >               _month = d._month;
 >               _day = d._day;
 >          }
->           
+>               
 >           return *this;
 >    }
 >   private:
@@ -591,7 +591,7 @@
 >    	int _month ;
 >    	int _day ;
 >   };
->   
+>       
 >   ```
 >
 >   ②<u>**赋值运算符只能重载成类的成员函数不能重载成全局函数。**</u>
@@ -671,7 +671,7 @@
 >    	d1 = d2;
 >    	return 0;
 >   }
->   
+>       
 >   ```
 >
 >   既然编译器生成的默认赋值运算符重载函数已经可以完成字节序的值拷贝了，我们就不需要再去生成了。
@@ -725,7 +725,7 @@
 >    	s2 = s1;
 >    	return 0;
 >   }
->   
+>       
 >   ```
 >
 >   **<u>注意：</u>**如果类中未涉及到资源管理，赋值运算符是否实现都可以；一旦涉及到资源管理则必须要实现。
@@ -775,5 +775,95 @@
 > }
 > ```
 >
-> 
 
+### Ⅴ. Ⅳ 自定义类型的流插入和流输出：
+
+> 在C++中是默认支持内部类型的流插入和流输出的，那么我们如何实现自定义类型的流插入和流输出呢？
+>
+> 首先我们观察`<<`和`>>`它和C语言中的左移和右移操作符相同，所以C++中也是将这两个运算符重载，得到流插入和流输出；
+>
+> ①按照这个思路我们先写出定义；
+>
+> ```c++
+> //这里的返回值类型和形参的类型是因为 cin 和 cout 分别包含在istream和ostream 中，具体的细节可以查看c++官网手册
+> ostream& operator << (ostream& out, const Date& d)
+> {
+> 	 out << d._year << "年" << d._month << "月" << d._day << "日" << endl;
+> 	 return out;
+> }
+> 
+> istream& operator >> (istream& in, Date& d)
+> {
+> 	 in >> d._year >> d._month >> d._day;
+> 	 return in;
+> }
+> ```
+>
+> ②将函数声明在类的外部：
+>
+> 这时候因为`Date`类内部的成员是`private:`修饰的,所以我们在类的外部是无法访问的，所以这时候在类的内部声明一个友元函数。
+>
+> ```c++
+> ostream& operator << (ostream& out, const Date& d); 
+> istream& operator >> (istream& out,Date& d);
+> ```
+>
+> ③声明友元函数：
+>
+> ```c++
+> friend ostream& operator << (ostream& out, const Date& d);
+> friend istream& operator >> (istream& out, Date& d);
+> ```
+>
+> 这时候我们就可以像输入和输出内部类型那样，输出自定义类型`Date`类了：
+>
+> ```c++
+> 	Date d1(2023, 3, 28);
+> 	cin >> d1;
+> 	cout << d1 << endl;
+> ```
+>
+> 但是我们一般会直接将函数的声明和定义放在一起，声明成一个内联函数，这样可以提高程序运行时候的效率。
+>
+> ```c++
+> inline ostream& operator << (ostream& out, const Date& d)
+> {
+> 	out << d._year << "年" << d._month << "月" << d._day << "日" << endl;
+> 	return out;
+> }
+> 
+> inline istream& operator >> (istream& in, Date& d)
+> {
+> 	in >> d._year >> d._month >> d._day;
+> 	return in;
+> }
+> ```
+
+## Ⅵ. const 成员：
+
+> <u>将const修饰的“成员函数”</u>称之为const成员函数，const修饰类成员函数，<u>实际修饰该成员函数 隐含的this指针，表明在该成员函数中不能对类的任何成员进行修改。</u>![image-20230401161100626](C:\Users\jason\AppData\Roaming\Typora\typora-user-images\image-20230401161100626.png)
+
+## Ⅶ.取地址及const取地址操作符重载
+
+> 这两个默认成员函数一般不用重新定义 ，编译器默认会生成。
+>
+> ```C++
+> class Date
+> { 
+> public :
+>  Date* operator&()
+>  {
+>  return this ;
+>  }
+>  const Date* operator&()const
+>  {
+>  return this ;
+>  }
+> private :
+>  int _year ; // 年
+>  int _month ; // 月
+>  int _day ; // 日
+> }
+> ```
+>
+> 这两个运算符一般不需要重载，使用编译器生成的默认取地址的重载即可，只有特殊情况，才需 要重载，比如想让别人获取到指定的内容！
