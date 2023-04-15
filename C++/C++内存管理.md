@@ -185,3 +185,50 @@
 >   ①在释放的对象空间上执行N次析构函数，完成N个对象中资源的清理
 >
 >   ②调用operator delete[]释放空间，实际在operator delete[]中调用operator delete来释 放空间
+
+### Ⅰ. Ⅴ 定位new表达式(placement-new)
+
+> 定位new表达式**是在已分配的原始内存空间中调用构造函数初始化一个对象**。
+>
+> 使用格式： 
+>
+> **new (place_address) type**或者**new (place_address) type(initializer-list)**，其中 **place_address必须是一个指针**，**initializer-list是类型的初始化列表** 
+>
+> 使用场景： 
+>
+> 定位new表达式在实际中一般是配合内存池使用。因为内存池分配出的内存没有初始化，所以如 果是自定义类型的对象，需要使用new的定义表达式进行显示调构造函数进行初始化。
+>
+> ![image-20230415080851511](C:\Users\jason\AppData\Roaming\Typora\typora-user-images\image-20230415080851511.png)
+>
+> ```C++
+> class A
+> {
+> 	public:
+>  		A(int a = 0)
+>  		: _a(a)
+>  		{
+>  			cout << "A():" << this << endl;
+>  		}
+>  		~A()
+>  		{
+>  			cout << "~A():" << this << endl;
+>  		}
+> 	private:
+>  		int _a;
+> };
+> // 定位new/replacement new
+> int main()
+> {
+>  	// p1现在指向的只不过是与A对象相同大小的一段空间，还不能算是一个对象，因为构造函数没有执行
+>  	A* p1 = (A*)malloc(sizeof(A));
+>  	new(p1)A;  // 注意：如果A类的构造函数有参数时，此处需要传参
+>  	p1->~A();
+>  	free(p1);
+>  	A* p2 = (A*)operator new(sizeof(A));
+>  	new(p2)A(10);
+>  	p2->~A();
+>  	operator delete(p2);
+>   return 0;
+> }
+> 
+> ```
