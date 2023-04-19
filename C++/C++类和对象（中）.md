@@ -567,14 +567,14 @@
 >           _month = month;
 >           _day = day;
 >      }
->          
+>            
 >    Date (const Date& d)
 >      {
 >           _year = d._year;
 >           _month = d._month;
 >           _day = d._day;
 >      }
->          
+>            
 >    Date& operator=(const Date& d)
 >    {
 >    if(this != &d)
@@ -583,7 +583,7 @@
 >               _month = d._month;
 >               _day = d._day;
 >          }
->                 
+>                   
 >           return *this;
 >    }
 >   private:
@@ -591,7 +591,7 @@
 >    	int _month ;
 >    	int _day ;
 >   };
->         
+>           
 >   ```
 >
 >   ②<u>**赋值运算符只能重载成类的成员函数不能重载成全局函数。**</u>
@@ -671,7 +671,7 @@
 >    	d1 = d2;
 >    	return 0;
 >   }
->         
+>           
 >   ```
 >
 >   既然编译器生成的默认赋值运算符重载函数已经可以完成字节序的值拷贝了，我们就不需要再去生成了。
@@ -725,7 +725,7 @@
 >    	s2 = s1;
 >    	return 0;
 >   }
->         
+>           
 >   ```
 >
 >   **<u>注意：</u>**如果类中未涉及到资源管理，赋值运算符是否实现都可以；一旦涉及到资源管理则必须要实现。
