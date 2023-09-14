@@ -12,7 +12,7 @@
 >
 > - 它的左右子树都是AVL树
 > - 左右子树高度之差(简称平衡因子)的绝对值不超过1(-1/0/1)
-> - ![image-20230830210407451](https://s2.loli.net/2023/08/30/AMH8kJrICgwXWYi.png)
+> - ![image-20230830210407451](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/AMH8kJrICgwXWYi.png)
 >   如果一棵二叉搜索树是高度平衡的，它就是AVL树。如果它有n个结点，其高度可保持在 $O(log_2 n)$，搜索时间复杂度O($log_2 n$)。
 
 ### Ⅱ. Ⅰ AVL树节点的定义
@@ -110,7 +110,7 @@
 >
 > ①新节点插入较高**左子树的左侧**---左左：右单旋
 >
-> ![](https://s2.loli.net/2023/08/30/w49inSey6C2ZsMG.gif)
+> ![左左_右单旋](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/w49inSey6C2ZsMG-1694598419802-3.gif)
 >
 > ```cpp
 > /*
@@ -171,7 +171,7 @@
 >
 > ②新节点插入**较高右子树的右侧**---右右：左单旋
 >
-> ![AVL树左单旋](https://s2.loli.net/2023/08/30/ZFElCaKrGO59SNV.gif)
+> ![AVL树左单旋](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/ZFElCaKrGO59SNV.gif)
 >
 > 实现方法和右单旋极其类似
 >
@@ -215,7 +215,7 @@
 >
 > ③新节点插入**较高左子树的右侧**---左右：**先左单旋再右单旋**
 >
-> ![AVL树左单旋+右单旋](../数据结构/AVL树左单旋+右单旋.gif)
+> ![AVL树左单旋+右单旋](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/AVL%E6%A0%91%E5%B7%A6%E5%8D%95%E6%97%8B+%E5%8F%B3%E5%8D%95%E6%97%8B.gif)
 > 将双旋变成单旋后再旋转，即：先对30进行左单旋，然后再对90进行右单旋，旋转完成后再 考虑平衡因子的更新。
 >
 > ```cpp
@@ -255,7 +255,7 @@
 >
 > ④新节点插入较高右子树的左侧---右左：先右单旋再左单旋
 >
-> ![AVL树右单旋+左单旋](https://s2.loli.net/2023/08/30/63g5eKVAI8YkFXS.gif)
+> ![AVL树右单旋+左单旋](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/63g5eKVAI8YkFXS.gif)
 >
 > ```cpp
 > 	void RotateRL(node* parent)
