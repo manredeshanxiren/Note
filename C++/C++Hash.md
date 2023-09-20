@@ -255,9 +255,9 @@
 >   				}
 >   				_tables.swap(newht._tables);
 >   			}
->   
+>       
 >   			size_t hashi = kv.first % _tables.size();
->   
+>       
 >   			//线性探测
 >   			size_t i = 1;
 >   			size_t index = hashi;
@@ -272,7 +272,7 @@
 >   			++_n;
 >   			return true;
 >   		}
->   
+>       
 >   		HashDate<K, V>* find(const K& key)
 >   		{
 >   			if (_tables.size() == 0)
@@ -280,7 +280,7 @@
 >   				return false;
 >   			}
 >   			size_t hashi = key % _tables.size();
->   
+>       
 >   			//线性探测
 >   			size_t i = 1;
 >   			size_t index = hashi;
@@ -294,7 +294,7 @@
 >   				index = hashi + i;
 >   				index %= _tables.size();
 >   				++i;
->   
+>       
 >   				//查找了一圈，证明表中的状态只有EXIST和DELET的状态
 >   				if (index == hashi)
 >   				{
@@ -303,7 +303,7 @@
 >   			}
 >   			return nullptr;
 >   		}
->   
+>       
 >   		bool Erase(const K& key)
 >   		{
 >   			HashDate<K, V>* ret = find(key);
@@ -341,14 +341,744 @@
 >               if(_ht[i]._state == EXIST)
 >                   newHt.Insert(_ht[i]._val);
 >          }
->           
+>               
 >           Swap(newHt);
 >      }
 >   }
->   
+>       
 >   ```
 >
->   
+>   线性探测优点：实现非常简单.
+>
+>   线性探测缺点：**一旦发生哈希冲突，所有的冲突连在一起，容易产生数据“堆积”**，即：**不同关键码占据了可利用的空位置，使得寻找某关键码的位置需要许多次比较，导致搜索效率降低**。如何缓解呢？
+>
+> ②二次探测
+>
+> 线性探测的缺陷是产生冲突的数据堆积在一块，这与其找下一个空位置有关系，因为找空位 置的方式就是挨着往后逐个去找，因此二次探测为了避免该问题，找下一个空位置的方法 为：$H_i$ = ($H_0$ + $i^2$ )% m, 或者：$H_i$ = ($H_0$ - $i^2$ )% m。其中：i =  1,2,3…， $H_0$是通过散列函数Hash(x)对元素的关键码 key 进行计算得到的位置，m是表的大小。对于2.1中如果要插入44，产生冲突，使用解决后的情况为：
+>
+> ![image-20230914190145848](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20230914190145848.png)
+> 研究表明：**当表的长度为质数且表装载因子a不超过0.5时，新的表项一定能够插入，而且任何一个位置都不会被探查两次。因此只要表中有一半的空位置，就不会存在表满的问题**。在搜索时可以不考虑表装满的情况，但在插入时必须确保表的装载因子a不超过0.5，如果超出 必须考虑增容。
+>
+> 因此：比散列最大的缺陷就是空间利用率比较低，这也是哈希的缺陷。
+
+### Ⅱ. Ⅳ. Ⅱ开散列
+
+> 1.开散列的概念
+>
+> 开散列法又叫**链地址法(开链法)**，首先对关键码集合用散列函数计算散列地址，**具有相同地址的关键码归于同一子集合，每一个子集合称为一个桶，各个桶中的元素通过一个单链表链接起来，**各链表的头结点存储在哈希表中。
+>
+> ![image-20230914190727235](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20230914190727235.png)
+> 从上图可以看出：**==散列表的每个桶中放的都是哈希冲突的元素。==**
+>
+> 2.**开散列的实现：**
+>
+> ```cpp
+> template<class K>
+> struct HashFunc
+> {
+> 	size_t operator()(const K& key)
+> 	{
+> 		return key;
+> 	}
+> };
+> 
+> 
+> //特化
+> template<>
+> struct HashFunc<string>
+> {
+> 	size_t operator()(const string& s)
+> 	{
+> 		size_t hash = 0;
+> 		for (auto ch : s)
+> 		{
+> 			hash += ch;
+> 			hash *= 31;
+> 		}
+> 
+> 		return hash;
+> 	}
+> };
+> 
+> namespace HashBucket
+> {
+> 	template<class K, class V>
+> 	struct HashNode
+> 	{
+> 		HashNode<K, V>* _next;
+> 		pair<K, V> _kv;
+> 
+> 		HashNode(const pair<K, V>& kv)
+> 			:_kv(kv)
+> 			,_next(nullptr)
+> 		{}
+> 	};
+> 
+> 	template<class K, class V, class Hash = HashFunc<K>>
+> 	class HashTable
+> 	{
+> 		typedef HashNode<K, V> Node;
+> 	public:
+> 		~HashTable()
+> 		{
+> 			for (auto& cur : _tables)
+> 			{
+> 				while (cur)
+> 				{
+> 					Node* next = cur->_next;
+> 					delete cur;
+> 					cur = next;
+> 				}
+> 				cur = nullptr;
+> 			}
+> 
+> 		}
+> 	public:
+> 
+> 
+> 		Node* Find(const K& key)
+> 		{
+> 			Hash hash;
+> 			if (_tables.size() == 0)
+> 			{
+> 				return nullptr;
+> 			}
+> 			size_t hashi = hash(key) % _tables.size();
+> 			Node* cur = _tables[hashi];
+> 			while (cur)
+> 			{
+> 				if (cur->_kv.first == key)
+> 					return cur;
+> 				cur = cur->_next;
+> 			}
+> 			return nullptr;
+> 		}
+> 
+> 		bool Erase(const K& key)
+> 		{
+> 			Hash hash;
+> 			size_t hashi = hash(key) % _tables.size();
+> 			Node* prev = nullptr;
+> 			Node* cur = _tables[hashi];
+> 
+> 			while (cur)
+> 			{
+> 				if (cur->_kv.first == key)
+> 				{
+> 					if (prev == nullptr)
+> 					{
+> 						_tables[hashi] = cur->_next;
+> 					}
+> 					else
+> 					{
+> 						prev->_next = cur->_next;
+> 					}
+> 
+> 					delete cur;
+> 					return true;
+> 				}
+> 
+> 				prev = cur;
+> 				cur = cur->_next;
+> 			}
+> 
+> 			return false;
+> 		}
+> 		bool Insert(const pair<K, V>& kv)
+> 		{
+> 			Hash hash;
+> 			if (Find(kv.first))
+> 			{
+> 				return false;
+> 			}
+> 			//载荷因子为1
+> 			if (_n == _tables.size())
+> 			{
+> 				size_t newsize = _tables.size() == 0 ? 10 : _tables.size() * 2;
+> 				vector<Node*> newht(newsize, nullptr);
+> 				Node* cur = nullptr;
+> 				for (auto cur : _tables)
+> 				{
+> 					while (cur)
+> 					{
+> 						Node* next = cur->_next;
+> 
+> 						size_t hashi = hash(cur->_kv.first) % newht.size();
+> 
+> 						//头插到新的表中
+> 						cur->_next = newht[hashi];
+> 						newht[hashi] = cur;
+> 
+> 						cur = next;
+> 					}
+> 				}
+> 				_tables.swap(newht);
+> 			}
+> 
+> 			//头插
+> 			size_t hashi = hash(kv.first) % _tables.size();
+> 			Node* newnode = new Node(kv);
+> 			newnode->_next = _tables[hashi];
+> 			_tables[hashi] = newnode;
+> 			_n++;
+> 			return true;
+> 		}
+> 		int MaxBucketSize()
+> 		{
+> 			int max = 0;
+> 			for (int i = 0; i < _tables.size(); ++i)
+> 			{
+> 				Node* cur = _tables[i];
+> 				int count = 0;
+> 				while (cur)
+> 				{
+> 					count++;
+> 					cur = cur->_next;
+> 				}
+> 				if (max < count) max = count;
+> 			}
+> 			return max;
+> 		}
+> 
+> 	private:
+> 		vector<Node*> _tables;
+> 		size_t _n = 0;
+> 	};
+> ```
+>
+> 3.**开散列的增容**
+>
+> ```cpp
+> 			//载荷因子为1
+> 			if (_n == _tables.size())
+> 			{
+>                 //这里的判断是为了防止初始size值为零的情况
+> 				size_t newsize = _tables.size() == 0 ? 10 : _tables.size() * 2;
+>                 
+> 				vector<Node*> newht(newsize, nullptr);
+> 				Node* cur = nullptr;
+>                 //遍历原表中的数据，将原表中的数据插入到新的表中
+> 				for (auto cur : _tables)
+> 				{
+> 					while (cur)
+> 					{
+> 						Node* next = cur->_next;
+> 						//算出扩容后的hash值
+> 						size_t hashi = hash(cur->_kv.first) % newht.size();
+> 
+> 						//头插到新的表中
+> 						cur->_next = newht[hashi];
+> 						newht[hashi] = cur;
+> 
+> 						cur = next;
+> 					}
+> 				}
+>                 //将原表的数组和新表交换
+> 				_tables.swap(newht);
+> 			}
+> ```
+>
+> 4.**开散列的思考**
+>
+> ①只能存储key为整形的元素，其他类型怎么解决？
+>
+> ==这里我们利用仿函数的方法来解决这个问题==，在需要计算相关的hash值的时候我们去调用这个函数即可
+>
+> ```cpp
+> template<class K>
+>     
+> //对于普通的K类型我们直接返回
+> struct HashFunc
+> {
+> 	size_t operator()(const K& key)
+> 	{
+> 		return key;
+> 	}
+> };
+> 
+> 
+> //对于string类型的特化
+> template<>
+> struct HashFunc<string>
+> {
+> 	size_t operator()(const string& s)
+> 	{
+> 		size_t hash = 0;
+> 		for (auto ch : s)
+> 		{
+> 			hash += ch;
+>             //关于这里为什么需要乘31，原因是为了避免字符串hash值重复的问题
+>             //就是相同字母组成的字符串，要使他们的hash值不同
+>             //详细的话可以阅读下面链接的文章
+>             
+> 			hash *= 31;
+> 		}
+> 
+> 		return hash;
+> 	}
+> };
+> ```
+>
+> [各种字符串Hash函数 ](https://www.cnblogs.com/-clq/archive/2012/05/31/2528153.html)
+>
+
+## Ⅲ. unordered_map和unordered_set的模拟实现
+
+### Ⅲ.ⅠHashBucket的改造
+
+> ①模板参数的改造
+>
+> 首先我们为了兼容map和set所以我们要进行模板参数的改造将以前的
+>
+> ```cpp
+> 	//修改前	
+> 	template<class K, class V>
+> 	struct HashNode
+> 	{
+> 		HashNode<K, V>* _next;
+> 		pair<K, V> _kv;
+> 
+> 		HashNode(const pair<K, V>& kv)
+> 			:_kv(kv)
+> 			,_next(nullptr)
+> 		{}
+> 	};
+> 	//修改后
+> 	//这里之后map的T就实例化为pair<const K, V>
+> 	//set就实例化为K
+> 	template<class T>
+> 	struct HashNode
+> 	{
+> 		HashNode<T>* _next;
+> 		T _data;
+> 		//同样的构造函数我们也进行了修改
+> 		HashNode(const T& data)
+> 			:_data(data)
+> 			, _next(nullptr)
+> 		{}
+> 	};
+> 
+> //修改前
+> template<class K, class V, class Hash = HashFunc<K>>
+> 	class HashTable
+>     {
+>         //...
+>     }
+> //修改后
+> //第二个参数更换成了T，兼容map和set。
+> //同时添加了KeyOfT的仿函数参数，以便HashTable内部进行比较时的需要
+> template<class K, class T, class KeyOfT, class Hash>
+> 	class HashTable
+>     {
+>         //...
+>     }
+> ```
+>
+> ②增加迭代器的操作
+>
+> 首先我们构造一个迭代器的类
+>
+> ```cpp
+> //前置声明，因为我们要在迭代器的类中用到HashTable来声明变量类型
+> 	template<class K, class T, class KeyOfT, class Hash>
+> 	class HashTable;
+> //Ref参数表示引用，Ptr参数代表指针
+> 	template<class K, class T, class Ref, class Ptr, class KeyOfT ,class Hash>
+> 	struct _HashIterator
+> 	{
+>         //我们typedef节点，HashTable.
+>         //这里的Self，这个Self虽然看起来和最后一个变量类型一样
+>         //其实不同，第四个变量类型只能是普通迭代器，而Self是根据
+>         //_HashIterator的不同而不同，_HashIterator如果是const迭代器
+>         //那么他就是const迭代器，_HashTable是普通迭代器那么他就是普通迭代器
+> 		typedef HashNode<T> Node;
+> 		typedef HashTable<K, T, KeyOfT, Hash> HT;
+> 		typedef _HashIterator<K, T, Ref, Ptr, KeyOfT, Hash> Self;
+> 		typedef _HashIterator<K, T, T&, T*, KeyOfT, Hash> Iterator;
+> 		//迭代器的两个内部变量
+>          //一个存储节点指针，一个存储HashTable
+> 		Node* _node;
+> 		//选用const是为了适配const迭代器
+> 		const HT*  _ht;
+> 
+> 
+> 		//这里的const是同样的道理适配const迭代器
+> 		_HashIterator(Node* node, const HT* ht)
+> 			:_node(node)
+> 			, _ht(ht)
+> 		{}
+> 
+> 		//拷贝构造
+> 		//const迭代器就是构造
+> 		//普通迭代器是拷贝构造
+> 		_HashIterator(const Iterator& it)
+> 			:_node(it._node)
+> 			, _ht(it._ht)
+> 		{}
+> 
+> 		Ref operator*()
+> 		{
+> 			return _node->_data;
+> 		}
+> 		
+> 		Ptr operator->()
+> 		{
+> 			return &_node->_data;
+> 		}
+> 
+> 		bool operator!=(const Self& s)
+> 		{
+> 			return _node != s._node;
+> 		}
+> 
+> 
+> 		Self& operator++()
+> 		{
+> 			KeyOfT kot;
+> 			Hash hash;
+> 			//当前的桶还没走完
+> 			if (_node->_next != nullptr)
+> 			{
+> 				_node = _node->_next;
+> 			}
+> 			else
+> 			{
+> 				//用哈希函数算出当前的位置
+> 				size_t hashi = hash(kot(_node->_data)) % _ht->_tables.size();
+> 				hashi++;
+> 				while (hashi < _ht->_tables.size())
+> 				{
+> 					//如果找到当前桶内有值的桶
+> 					if (_ht->_tables[hashi])
+> 					{
+> 						_node = _ht->_tables[hashi];
+> 						break;
+> 					}
+> 					//否则的话继续寻找
+> 					else
+> 					{
+> 						hashi++;
+> 					}
+> 				}
+> 				//如果找完还没有找到那就是没有数据了
+> 				if (hashi == _ht->_tables.size())
+> 				{
+> 					_node = nullptr;
+> 				}
+> 			}
+> 			return *this;
+> 		}
+> 
+> 	};
+> 
+> 
+> 	template<class K, class T, class KeyOfT, class Hash>
+> 	class HashTable
+> 	{
+> 		//这里的友元声明是为了可以让_HashIterator访问HashTable内部的_tables的私有变量
+> 		template<class K, class T, class Ref, class Ptr, class KeyOfT, class Hash>
+> 		friend struct _HashIterator;
+> 		
+> 		typedef HashNode<T> Node;
+> 	public:
+> 		typedef _HashIterator<K, T, T&, T*, KeyOfT, Hash> iterator;
+> 		typedef _HashIterator<K, T, const T&, const T*, KeyOfT, Hash> const_iterator;
+>         //....
+>     }
+> ```
+>
+> ③通过Key获取Value的操作
+>
+> 这个操作的话主要是涉及到map，因为map天生支持下标访问的操作，那么我们如何改造呢
+>
+> 首先我们要进行insert的改造
+>
+> ```cpp
+> //返回值变成迭代器和是否插入成功的pair
+> pair<iterator, bool> Insert(const T & data)
+> 		{
+> 			KeyOfT kot;
+> 			Hash hash;
+>     		//首先我们用Find去寻找当前要插入的值是否已经存在了
+> 			iterator it = Find(kot(data));
+> 			if (it != end())
+> 			{
+> 				return make_pair(it, false);
+> 			}
+> 			//载荷因子为1，我们选择扩容
+> 			if (_n == _tables.size())
+> 			{
+> 				//size_t newsize = _tables.size() == 0 ? 10 : _tables.size() * 2;
+>                 //这里用stl库中的方式避免了size为零的情况，并且使得每次扩容的空间更加合理
+> 				size_t newsize = GetNextPrime(_tables.size());
+> 				vector<Node*> newht(newsize, nullptr);
+> 				Node* cur = nullptr;
+>                 //遍历原来的HashTable，将原来表中的数据重新映射到新表
+> 				for (auto cur : _tables)
+> 				{
+> 					while (cur)
+> 					{
+> 						Node* next = cur->_next;
+> 						//用kot仿函数获取_data的key
+>                           //Hash函数用来计算哈希值
+> 						size_t hashi = hash(kot(cur->_data)) % newht.size();
+> 
+> 						//头插到新的表中
+> 						cur->_next = newht[hashi];
+> 						newht[hashi] = cur;
+> 
+> 						cur = next;
+> 					}
+> 				}
+>                 //更新_tables中存储的表原来的表不用去管，因为他是一个局部变量。
+> 				_tables.swap(newht);
+> 			}
+> 
+> 			//头插，先计算哈希值然后在进行计算
+> 			size_t hashi = hash(kot(data)) % _tables.size();
+> 			Node* newnode = new Node(data);
+> 			newnode->_next = _tables[hashi];
+> 			_tables[hashi] = newnode;
+>     		//载荷因子更新
+> 			_n++;
+> 			return make_pair(iterator(newnode, this), true);
+> 		}
+> ```
+>
+> 然后我们在map的重载运算符`[]`这样实现
+>
+> ```cpp
+> V& operator[](const K& key)
+> {
+>     //我们利用insert函数一方面可以实现用[]插入
+>     //一方面也可以实现用key来修改value
+> 	pair<iterator, bool> ret = insert(make_pair(key, V()));
+> 	return ret.first->second;
+> }
+> ```
+
+### Ⅲ. Ⅱ unordered_map
+
+> ```cpp
+> #pragma once
+> 
+> #include"Hash.h"
+> 
+> 
+> 
+> namespace xupt
+> {
+> 
+> 	template<class K, class V, class Hash = HashFunc<K>>
+> 	class unordered_map
+> 	{
+> 
+> 	public:
+> 		struct MapKeyOfT
+> 		{
+> 		public:
+> 			const K& operator()(const pair<const K, V>& kv)
+> 			{
+> 				return kv.first;
+> 			}
+> 		};
+> 
+> 	public:
+> 		typedef typename HashBucket::HashTable<K, pair<const K, V>, MapKeyOfT, Hash>::iterator iterator;
+> 		typedef typename HashBucket::HashTable<K, pair<const K, V>, MapKeyOfT, Hash>::const_iterator const_iterator;
+> 		
+> 
+> 	public:
+> 		iterator begin()
+> 		{
+> 			return _ht.begin();
+> 		}
+> 
+> 		iterator end()
+> 		{
+> 			return _ht.end();
+> 		}
+> 
+> 		const_iterator begin() const
+> 		{
+> 			return _ht.begin();
+> 		}
+> 
+> 		const_iterator end() const
+> 		{
+> 			return _ht.end();
+> 		}
+> 
+> 		V& operator[](const K& key)
+> 		{
+> 			pair<iterator, bool> ret = insert(make_pair(key, V()));
+> 			return ret.first->second;
+> 		}
+> 
+> 		pair<iterator, bool> insert(const pair<const K, V>& kv)
+> 		{
+> 			return _ht.Insert(kv);
+> 		}
+> 
+> 		iterator find()
+> 		{
+> 			return _ht.Find();
+> 		}
+> 
+> 		bool erase()
+> 		{
+> 			return _ht.Erase();
+> 		}
+> 
+> 
+> 
+> 
+> 
+> 	private:
+> 		HashBucket:: HashTable<K, pair<const K, V>, MapKeyOfT, Hash> _ht;
+> 	};
+> 
+> 	void test_unordered_map()
+> 	{
+> 		unordered_map<int, int> ht;
+> 		ht.insert(make_pair(1, 1));
+> 		ht.insert(make_pair(2, 2));
+> 		ht.insert(make_pair(3, 3));
+> 		auto it = ht.begin();
+> 		while (it != ht.end())
+> 		{
+> 			cout << it->first << ':' << it->second << " ";
+> 			++it;
+> 		}
+> 		cout << endl;
+> 		for (auto& m : ht)
+> 		{
+> 			cout << m.first << " ";
+> 		}
+> 	}
+> 
+> 	void test_unordered_map2()
+> 	{
+> 		string arr[] = { "西瓜", "西瓜", "苹果", "西瓜", "苹果", "苹果", "西瓜", "苹果", "香蕉", "苹果", "香蕉", "梨" };
+> 		unordered_map<string, int> countMap;
+> 		for (auto& e : arr)
+> 		{
+> 			countMap[e]++;
+> 		}
+> 
+> 		for (auto& kv : countMap)
+> 		{
+> 			cout << kv.first << ":" << kv.second << endl;
+> 		}
+> 	}
+> 	void test_unordered_map3()
+> 	{
+> 		string arr[] = { "西瓜", "西瓜", "苹果", "西瓜", "苹果", "苹果", "西瓜", "苹果", "香蕉", "苹果", "香蕉", "梨" };
+> 		unordered_map<string, int> countMap;
+> 		for (auto& e : arr)
+> 		{
+> 			countMap[e]++;
+> 		}
+> 
+> 		unordered_map<string, int> ::iterator it = countMap.begin();
+> 		while (it != countMap.end())
+> 		{
+> 			cout << it->first << ":" << it->second << endl;
+> 			++it;
+> 		}
+> 	}
+> }
+> ```
+
+### Ⅲ.Ⅲunordered_set
+
+> ```cpp
+> #pragma once
+> 
+> 
+> #include"Hash.h"
+> 
+> 
+> 
+> namespace xupt
+> {
+> 
+> 	template<class K, class Hash = HashFunc<K>>
+> 	class unordered_set
+> 	{
+> 	public:
+> 		struct SetKeyOfT
+> 		{
+> 		public:
+> 			const K& operator()(const K& key)
+> 			{
+> 				return key;
+> 			}
+> 		};
+> 	public:
+> 
+> 		typedef typename HashBucket::HashTable<K, K, SetKeyOfT, Hash> ::const_iterator iterator;
+> 		typedef typename HashBucket::HashTable<K, K, SetKeyOfT, Hash> ::const_iterator const_iterator;
+> 
+> 		iterator begin()
+> 		{
+> 			return _ht.begin();
+> 		}
+> 
+> 		iterator end()
+> 		{
+> 			return _ht.end();
+> 		}
+> 
+> 		const_iterator begin() const
+> 		{
+> 			return _ht.begin();
+> 		}
+> 
+> 		const_iterator end() const
+> 		{
+> 			return _ht.end();
+> 		}
+> 		pair<iterator, bool>  insert(const K& key)
+> 		{
+> 			return _ht.Insert(key);
+> 		}
+> 
+> 		iterator find()
+> 		{
+> 			return _ht.Find();
+> 		}
+> 
+> 		bool erase()
+> 		{
+> 			return _ht.Erase();
+> 		}
+> 	
+> 
+> 
+> 
+> 	private:
+> 		HashBucket :: HashTable<K, K, SetKeyOfT, Hash> _ht;
+> 	};
+> 
+> 	void test_unordered_set()
+> 	{
+> 		unordered_set<int> ht;
+> 		ht.insert(1);
+> 		ht.insert(2);
+> 		ht.insert(3);
+> 		unordered_set<int> ::const_iterator it = ht.begin();
+> 		while (it != ht.end())
+> 		{
+> 			cout << *it << endl;
+> 			++it;
+> 		}
+> 		cout << endl;
+> 	}
+> }
+> ```
+>
+> 
 
 
 
