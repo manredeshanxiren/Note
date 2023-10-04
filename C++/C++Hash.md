@@ -255,9 +255,9 @@
 >   				}
 >   				_tables.swap(newht._tables);
 >   			}
->       
+>         
 >   			size_t hashi = kv.first % _tables.size();
->       
+>         
 >   			//线性探测
 >   			size_t i = 1;
 >   			size_t index = hashi;
@@ -272,7 +272,7 @@
 >   			++_n;
 >   			return true;
 >   		}
->       
+>         
 >   		HashDate<K, V>* find(const K& key)
 >   		{
 >   			if (_tables.size() == 0)
@@ -280,7 +280,7 @@
 >   				return false;
 >   			}
 >   			size_t hashi = key % _tables.size();
->       
+>         
 >   			//线性探测
 >   			size_t i = 1;
 >   			size_t index = hashi;
@@ -294,7 +294,7 @@
 >   				index = hashi + i;
 >   				index %= _tables.size();
 >   				++i;
->       
+>         
 >   				//查找了一圈，证明表中的状态只有EXIST和DELET的状态
 >   				if (index == hashi)
 >   				{
@@ -303,7 +303,7 @@
 >   			}
 >   			return nullptr;
 >   		}
->       
+>         
 >   		bool Erase(const K& key)
 >   		{
 >   			HashDate<K, V>* ret = find(key);
@@ -341,11 +341,11 @@
 >               if(_ht[i]._state == EXIST)
 >                   newHt.Insert(_ht[i]._val);
 >          }
->               
+>                 
 >           Swap(newHt);
 >      }
 >   }
->       
+>         
 >   ```
 >
 >   线性探测优点：实现非常简单.
