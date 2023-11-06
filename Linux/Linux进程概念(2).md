@@ -4,11 +4,12 @@
 
 ### Ⅰ . Ⅰ进程的概念:
 
-> 内核关于进程的相关数据结构 + 当前进程的代码和数据;
+> **<font color='orange'>内核关于进程的相关数据结构 + 当前进程的代码和数据;</font>**
 
 ### Ⅰ. Ⅱ描述进程-PCB:
 
 > - 进程信息被放在一个叫做进程控制块的数据结构中，可以理解为进程属性的集合。
+> - PCB内部的属性和文件存储在磁盘中的属性是没有太大关系的，是重新生成的。
 > - 课本上称之为PCB（process control block）， Linux操作系统下的PCB是: task_struct  
 
 #### task_ struct内容分类
@@ -35,11 +36,64 @@
 >
 > ![image-20231101194517936](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231101194517936.png)
 >
+> 这里显示的就是我们当前操作系统中在运行的进程，那些蓝色的数字就是进程的`pid`:
+>
+> 当进程存在时，我们可以通过`pid`来进入文件来查看进程相关的属性：
+>
+> ![image-20231102154929933](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231102154929933.png)
+>
+> 当我们kill这个进程的时候，当我再次查看`pid`对应的文件：
+>
+> ![image-20231102155040719](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231102155040719.png)
+>
 > 大多数进程信息同样可以使用top和ps这些用户级工具来获取  
 >
 > `ps aux | gep test | grep -v grep`
 >
 > ![image-20231101194552370](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231101194552370.png)
+>
+> 那我们如何直接获取进程`pid`呢？这时候我们就需要用到我们接触到的第一个操作系统接口`getpid()`;
+>
+> `getpid()`：哪个进程去调用它就返回的是哪个进程的`pid`;
+>
+> `getppid():`哪个进程去调用它就返回的是哪个进程的父进程的`pid`;
+>
+> 我们运行如下的代码：
+>
+> ```c
+> #include<stdio.h>    
+> #include<unistd.h>    
+> #include<sys/types.h>    
+>     
+> int main()    
+> {              
+>   while(1)    
+>   {      
+>     printf("myprocess: 我已经是一个进程了，我的PID是：%d,我的父进程PID是：%d\n", getpid(), getppid());        
+>     sleep(1);    
+>   }                                                                            
+> }  
+> ```
+>
+> 运行如下的结果：
+>
+> ![image-20231102165708920](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231102165708920.png)
+>
+>  然后我们反复的去运行然后观察：
+>
+> 我们发现父进程的`PID`一直没有变化，但是进程`PID`却在变化。那么这个没有变化的进程是谁呢？是不是我们每次用命令行运行程序的时候都是他来帮我们创建的呢？
+>
+> ![image-20231102170042615](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231102170042615.png)
+>
+> 接下来我们用`ps`命令去寻找一下这个进程：
+>
+> ![image-20231102170543491](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231102170543491.png)
+>
+> 我们发现它是`bash`，它是我们的命令行解释器，本质上它也是一个进程；
+>
+> 命令行启动的所有的程序，最终都会变成进程，而该进程对应的父进程就是`bash`;
+>
+> 那么`bash`是如何创建子进程的呢？
 
 ### Ⅰ. Ⅴ如何创建子进程:
 
@@ -73,15 +127,15 @@ int main()
 
 运行结果:
 
-![image-20231101194631231](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231101194631231.png)
+<img src="https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231101194631231.png" alt="image-20231101194631231" style="zoom: 50%;" />
 
 > a.fork之后，执行流会变成2个执行流;
 >
 > b.fork之后，谁先运行由调度器运行;
 >
-> c.fork之后，fork之后的代码共享，通常我们通过if 和 ifelse来进行执行流分流;
+> c.fork之后，fork之后的**代码共享**，通常我们通过if 和 ifelse来进行执行流分流;
 
-原理:
+**<font color='red'>原理:</font>**
 
 > - fork做了什么?:
 >
@@ -89,92 +143,19 @@ int main()
 >
 > - fork如何看待？
 >
->   进程在运行的时候，是具有独立性的;
+>   进程在运行的时候，**是具有独立性的;**
 >
->   父子进程也具有独立性;
+>   **<font color='cornflowerblue'>父子进程也具有独立性;</font>**
 >
 >   代码：是只读的；
 >
->   数据：当有一个执行流尝试修改数据的时候，OS会自动给我们当前的进程触发写时拷贝（操作系统会拷贝一份数据让进程去另一个地方修改，而不会修改原始数据）
+>   数据：当有一个执行流尝试修改数据的时候，OS会自动给我们当前的进程触发**写时拷贝**（操作系统会拷贝一份数据让进程去另一个地方修改，而不会修改原始数据）
 >
 > - 如何理解fork();两个返回值？
 >
 >   对于一个函数来说，函数执行return的时候，函数的主体功能就已经实现了。
 >
->   fork函数本质上来说时OS为我们所提供的函数！
+>   fork函数本质上来说是OS为我们所提供的函数！
 >
->   因为当执行完fork函数的主体的时候，主进程被调度和子进程也会被执行所以在fork的函数内部return这段语句被执行了两次，所以返回了两个返回值。
-
-## Ⅱ. 进程状态
-
-> 阻塞：进程因为等待某种条件就绪，而导致的一种不推进的状态--进程卡住了--阻塞一定是在等待某种资源--为什么阻塞？进程要通过等待的方式，等具体的资源被别人是用完成之后的，再被自己使用。(用于理解：**pcb指针放在对应硬件的struct队列中进行等待**）
->
-> 挂起：当内存中阻塞的进程过多时，这时候操作系统就会用自己的算法将进程的代码和数据交换到磁盘时，这个过程交挂起；
-
-### Ⅱ. Ⅰ Linux的进程状态
-
-> - 为了弄明白正在运行的进程是什么意思，我们需要知道进程的不同状态。一个进程可以有几个状态（在 Linux内核里，进程有时候也叫做任务）
->
->   状态在kernel源代码的定义：
->
->   ```livescript
->   /*
->   * The task state array is a strange "bitmap" of
->   * reasons to sleep. Thus "running" is zero, and
->   * you can test for combinations of others with
->   * simple bit tests.
->   */
->   static const char * const task_state_array[] = {
->   "R (running)", /* 0 */
->   "S (sleeping)", /* 1 */
->   "D (disk sleep)", /* 2 */
->   "T (stopped)", /* 4 */
->   "t (tracing stop)", /* 8 */
->   "X (dead)", /* 16 */
->   "Z (zombie)", /* 32 */
->   };
->   ```
->
->   - R运行状态（running）：它并不表示进程一直在运行，它表明进程要么是在运行要么就是在运行队列里。
->
->   - S睡眠状态（sleeping）：意味着进程在等待某事件（例如：向屏幕打印，等待键盘的输入等）完成（这里的睡眠也可以称为中断睡眠（interruptible sleep））
->
->   - D磁盘休眠状态（Disk Sleep）：**当进程的功能是向磁盘中读写数据的时候需要在内存中进行等待也就是（阻塞）当内存中阻塞的进程很多时这时候操作系统就会杀进程，但是对于这种进程操作系统会做特殊的处理将这个进程处理为D状态（这种状态无法被操作系统杀死）**，有时候也叫不可中断睡眠状态（uninterruptible sleep），在这个状态的进程通常会等待IO的结束。
->
->   - T停止状态（stopped）：可以通过发送 SIGSTOP 信号给进程来停止（T）进程。这个被暂停的进程可 以通过发送 SIGCONT 信号让进程继续运行。
->
->     这里我们需要用到`kill`命令：使用`kill -l`查看`kill`指令的参数：
->
->     ![image-20231101194648595](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231101194648595.png)
->
->     命令18和19分别就是继续和停止进程的指令；
->
->     那么我们如何使用这些指令呢？格式如下：
->
->     `kill -18 PID` 或者`kill -19 PID`
->
-> 
->
->     ![image-20230414132243824](C:\Users\jason\AppData\Roaming\Typora\typora-user-images\image-20230414132243824.png)
->
-> 
->
->     - Z(zombie)-僵尸进程
->         
->       > - 僵死状态（Zombies）是一个比较特殊的状态。当进程退出并且父进程（使用wait()系统调用,后面讲） 没有读取到子进程退出的返回代码时就会产生僵死(尸)进程
->       > - 僵死进程会以终止状态保持在进程表中，并且会一直在等待父进程读取退出状态代码。
->       > - 所以，只要子进程退出，父进程还在运行，但父进程没有读取子进程状态，子进程进入Z状态
->
-> 
->
->     ![image-20230414133230437](C:\Users\jason\AppData\Roaming\Typora\typora-user-images\image-20230414133230437.png)
->
-> 
->
->     僵尸进程
->         
->     > - 进程的退出状态必须被维持下去，因为他要告诉关心它的进程（父进程），你交给我的任务，我办的怎 么样了。可父进程如果一直不读取，那子进程就一直处于Z状态？是的！
->     > - 维护退出状态本身就是要用数据维护，也属于进程基本信息，所以保存在task_struct(PCB)中，换句话 说，Z状态一直不退出，PCB一直都要维护？是的！
->     > - 那一个父进程创建了很多子进程，就是不回收，是不是就会造成内存资源的浪费？是的！因为数据结构 对象本身就要占用内存，想想C中定义一个结构体变量（对象），是要在内存的某个位置进行开辟空 间！
->     > - 内存泄漏?是的！
+>   因为当执行完fork函数的主体的时候，主进程被调度和子进程也会被执行所以在fork的函数**内部return这段语句被执行了两次**，**所以返回了两个返回值**。
 
