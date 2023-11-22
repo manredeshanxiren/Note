@@ -261,22 +261,72 @@ Linux系统只认inode号，文件的inode属性中，并不存在文件名！�
 > ```c
 > struct inode
 > {
->     int inode number;
->     int ref_count;
->     mode_t mode;
->     int uid;
->     int gid;
->     int size;
->     data;
->     ...
->     int datablock[NUM];
+> int inode number;
+> int ref_count;
+> mode_t mode;
+> int uid;
+> int gid;
+> int size;
+> data;
+> ...
+> int datablock[NUM];
 > }
 > ```
+>
+> 同时我们也可以解答之前的疑惑：`.`和`..`为什么可以代表当前目录和上级目录
+>
+> ![image-20231120222150418](C:/Users/jason/AppData/Roaming/Typora/typora-user-images/image-20231120222150418.png)
+>
+> 所以本质上`.`和`..`来说也是硬连接的例子！每个目录都是这样的！
+>
+> ![image-20231121130509073](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231121130509073.png)
+>
+> 不能给目录建立硬连接：
+>
+> 当我们尝试去给一个目录加硬连接时，是不被允许的，但是我们刚刚不是才看过硬链接目录的例子吗？`.`和`..`的情况。这又是怎么一回事，当我们给目录加硬链接的时候非常容易造成一个环，虽然`.`和`..`也是一个环但是它们只有一级，并且操作系统是可以识别并且操控的。但是如果操作系统开放了给目录添加硬连接的权限，那么
+>
+> 目录可能会变得非常混乱，减缓了操作系统的效率。
+>
+> ![image-20231121131740234](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231121131740234.png)
 
 ##### ②软连接
 
 > 使用`ln -s log.txt Newfile`创建一个软链接
 >
-> 我们发现inode是不相同，软链接内部放的是自己所指向的文件的路径类似于windows中的快捷方式
+> 软连接是一个独立的连接文件，有自己的inode number，必有自己的inode属性和内容。
+>
+> 软链接内部放的是自己所指向的文件的路径类似于windows中的快捷方式
 >
 > ![image-20231120181902510](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231120181902510.png)
+
+### 4.4 ACM时间
+
+我们`stat 文件名`的时候会出现三个时间：
+
+![image-20231121133547278](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231121133547278.png)
+
+那么这三个时间分别有什么含义呢？
+
+> - Access:最后的访问时间
+> - Modify:文件内容最后修改的时间
+> - Change:文件属性最后修改的时间
+
+我们尝试写入一些内容，我们发现Modify时间修改了很正常，但是为什么Change时间也跟着变化了，原因是我们修改了文件的内容，其实他的属性也变化了的！
+
+![image-20231121133727285](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231121133727285.png)
+
+接下来我们vim编辑一下文件：
+
+我们发现时间都变化了
+
+![image-20231121133947162](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231121133947162.png)
+
+有一个奇怪的现象，我们echo不也是修改了文件吗？为什么Access时间不发生变化：
+
+但是当我们cat的时候却发生了变化，其实这是操作系统的策略，为了减少访问外设提高运行效率的一种策略。
+
+当我们echo的时候文件的内容已经发生了变化，只是还没同步到磁盘，所以对应的Access时间也没有发生变化。
+
+当我们cat的时候这时候操作系统同步到了磁盘，所以我们因此观察到了Access时间变化的情况！
+
+![image-20231121134154672](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231121134154672.png)
