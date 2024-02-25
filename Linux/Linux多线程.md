@@ -205,3 +205,469 @@ int main()
 ![image-20240224163613503](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240224163613503.png)
 
 ## 4.线程的控制
+
+### 4.1线程的创建
+
+Linux下没有真正意义的线程，而是用进程来模拟的线程(LWP)，--- 所以，Linux不会提供直接创建线程的系统调用，他会给我们提供更多轻量级的进程的接口
+
+库：将Linux接口封装，对上给用户提供进行线程控制的接口----->用户级线程库---->pthread库，我们所有的操作系统都需要自带--->原生线程库。
+
+用户视角：只认线程
+
+```cpp
+功能：创建一个新的线程
+原型
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *
+(*start_routine)(void*), void *arg);
+参数
+thread:返回线程ID
+attr:设置线程的属性，attr为NULL表示使用默认属性
+start_routine:是个函数地址，线程启动后要执行的函数
+arg:传给线程启动函数的参数
+返回值：成功返回0；失败返回错误码
+```
+错误检查：
+
+> - 传统的一些函数是，成功返回0，失败返回-1，并且对全局变量`errno`赋值以指示错误  
+> - `pthreads`函数出错时不会设置全局变量`errno`（而大部分其他POSIX函数会这样做）。而是将错误代码通过返回值返回
+> - `pthreads`同样也提供了线程内的`errno`变量，以支持其它使用`errno`的代码。对于`pthreads`函数的错误，建议通过返回值来判定，因为读取返回值要比读取线程内的`errno`变量的开销更小。  
+
+案例一：
+
+```cpp
+#include<iostream>
+#include<pthread.h>
+#include<unistd.h>
+
+using namespace std;
+
+
+void* threadruning(void* args)
+{
+    while(true)
+    {
+        cout << "我是一个线程,我的self_id是" << pthread_self() << endl;
+
+        sleep(1);
+    }
+}
+
+
+int main()
+{
+    pthread_t t1; //pthread_t是一个无符号的长整数
+
+    pthread_create(&t1, nullptr, threadruning, nullptr);
+
+    while(1)
+    {
+        cout << "我是主线程,我的id是:" << t1 << endl; 
+        sleep(1);
+    }
+
+    return 0;
+}
+```
+
+运行结果：
+
+我们发现LWP和我们程序内部打印出来的ID是不一样的。
+
+![image-20240225092038720](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240225092038720.png)
+
+案例二：
+
+```cpp
+#include<iostream>
+#include<pthread.h>
+#include<unistd.h>
+
+#define NUM 10
+using namespace std;
+
+
+
+void* threadruning(void* args)
+{
+    char* name = (char*)args;
+    while(true)
+    {
+        cout << "我是" << name <<",我的self_id是" << pthread_self() << endl;
+
+        sleep(1);
+    }
+}
+
+
+int main()
+{
+    pthread_t tids[NUM]; //pthread_t是一个无符号的长整数
+
+    for(int i = 0 ; i < NUM; ++i)
+    {
+        char tname[64];
+        snprintf(tname, 64, "thread-%d", i + 1);
+        pthread_create(tids + i, nullptr, threadruning, tname);
+    }
+
+
+
+
+    while(1)
+    {
+        cout << "我是主线程" << endl; 
+        sleep(2);
+    }
+
+    return 0;
+}
+```
+
+运行结果：
+
+原因是我们所有的线程是共享这一段缓冲区的，所以我们每个进程看到的都是同一块缓冲区。 
+
+![image-20240225093543580](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240225093543580.png)
+
+改进：我们将`tname`的空间编程动态内存空间即可，相当于每个线程都有自己单独的`tname`
+
+```cpp
+//....
+int main()
+{
+    pthread_t tids[NUM]; //pthread_t是一个无符号的长整数
+
+    for(int i = 0 ; i < NUM; ++i)
+    {
+        char* tname = new char[64];
+        snprintf(tname, 64, "thread-%d", i + 1);
+        pthread_create(tids + i, nullptr, threadruning, tname);
+    }
+   //...
+```
+
+运行结果：
+
+![image-20240225095436604](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240225095436604.png)
+
+### 4.2线程的退出
+
+> ①主线程退出，那么我们对应的所有的线程也都退出。
+>
+> ②单个线程如果出现除零，野指针问题导致线程崩溃，进程也会随着崩溃 
+>
+> ③线程是进程的执行分支，线程出异常，就类似进程出异常，进而触发信号机制，终止进程，进程终止，该进程内的所有线程也就随即退出 
+
+### 4.3线程的等待
+
+> 为什么线程需要等待
+>
+> - 已经退出的线程，其空间没有被释放，仍然在进程的地址空间内  
+> - 创建新的线程不会复用刚才退出线程的地址空间  
+
+```cpp
+功能：等待线程结束
+原型
+int pthread_join(pthread_t thread, void **value_ptr);
+参数
+thread:线程ID
+value_ptr:它指向一个指针，后者指向线程的返回值
+返回值：成功返回0；失败返回错误码
+```
+
+> 线程终止的三种情况：
+>
+> - 线程函数执行完毕
+> - `pthread_exit(void*)`;
+> - 一个线程可以调用`pthread_ cancel`终止同一进程中的另一个线程  
+
+代码示例：
+
+```cpp
+#include<iostream>
+#include<pthread.h>
+#include<unistd.h>
+
+#define NUM 10
+using namespace std;
+
+
+
+void* threadruning(void* args)
+{
+    char* name = (char*)args;
+    while(true)
+    {
+        cout << "我是" << name <<",我的self_id是" << pthread_self() << endl; 
+        //打印线程的id,在线程自己内部调用：pthread_self
+
+        sleep(3);
+
+        break;
+    }
+
+    delete name;
+
+    return nullptr; 
+}
+
+
+int main()
+{
+    pthread_t tids[NUM]; //pthread_t是一个无符号的长整数
+
+    for(int i = 0 ; i < NUM; ++i)
+    {
+        char* tname = new char[64];
+        snprintf(tname, 64, "thread-%d", i + 1);
+        pthread_create(tids + i, nullptr, threadruning, tname);
+    }
+
+    for(int i = 0; i < NUM; ++i)
+    {
+        int n = pthread_join(tids[i], nullptr);
+        if(n != 0) cout << "pthread_join error" << endl;
+    }
+
+    // while(1)
+    // {
+    //     cout << "我是主线程" << endl; 
+    //     sleep(2);
+    // }
+
+    return 0;
+}
+```
+
+### 4.4线程的取消
+
+> `pthread_cancel(pthread_t)`接口：
+>
+> 当一个进程开始运行的时候，我们可以调用这个接口，将其取消；
+>
+> ```cpp
+> #include <iostream>
+> #include <string>
+> #include <unistd.h>
+> #include <pthread.h>
+> #include <ctime>
+> 
+> using namespace std;
+> 
+> void *threadRun(void* args)
+> {
+>     const char*name = static_cast<const char *>(args);
+> 
+>     int cnt = 5;
+>     while(cnt)
+>     {
+>         cout << name << " is running: " << cnt-- << " obtain self id: " << pthread_self() << endl;
+>         sleep(1);
+>     }
+> 
+>     pthread_exit((void*)11); 
+> 
+>     // PTHREAD_CANCELED; #define PTHREAD_CANCELED ((void *) -1)
+> }
+> 
+> int main()
+> {
+>     pthread_t tid;
+>     pthread_create(&tid, nullptr, threadRun, (void*)"thread 1");
+>      sleep(3);
+> 
+>      pthread_cancel(tid);
+> 
+>     void *ret = nullptr;
+>     pthread_join(tid, &ret);
+>     cout << " new thread exit : " << (int64_t)ret << "quit thread: " << tid << endl;
+>     return 0;
+> }
+> ```
+
+### 4.5线程的分离
+
+> 一个线程如果被分离，就无法join，如果join的话，就会报错。
+>
+> - 默认情况下，新创建的线程是`joinable`的，线程退出后，需要对其进行`pthread_join`操作，否则无法释放资源，从而造成系统泄漏  
+> - 如果不关心线程的返回值，`join`是一种负担，这个时候，我们可以告诉系统，当线程退出时，自动释放线程资源  
+>
+> ```cpp
+> int pthread_detach(pthread_t thread);
+> ```
+>
+> 可以是线程组内其他线程对目标线程进行分离，也可以是线程自己分离:  
+>
+> ```cpp
+> pthread_detach(pthread_self());
+> ```
+>
+> **joinable和分离是冲突的，一个线程不能既是joinable又是分离的。**   
+>
+> ```cpp
+> #include<iostream>
+> #include<pthread.h>
+> #include<unistd.h>
+> #include<cstring>
+> 
+> using namespace std;
+> 
+> 
+> void* runing(void* args)
+> {
+>     pthread_detach(pthread_self());
+>     while(1)
+>     {
+>         cout << "我是线程,我正在运行....." << endl;
+>         sleep(1);
+> 
+>         break;
+>     }
+> 
+>     return nullptr;
+> }
+> 
+> 
+> int main()
+> {
+>     pthread_t t1;
+> 
+>     pthread_create(&t1, nullptr, runing, nullptr);
+> 
+>     pthread_detach(t1);
+>     
+>     int n = pthread_join(t1, nullptr);
+> 
+>     if(n != 0)
+>     {
+>         cerr <<"error:" << n <<":"<< strerror(n) << endl;
+>     }
+> 
+> 
+>     return 0;
+> }
+> ```
+>
+> ![image-20240225202252894](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240225202252894.png)
+
+### 4.6线程的用途
+
+> - 合理的使用多线程，能提高CPU密集型程序的执行效率  
+> - 合理的使用多线程，能提高IO密集型程序的用户体验（如生活中我们一边写代码一边下载开发工具，就是多线程运行的一种表现）  
+
+## 5.线程ID及进程地址空间布局  
+
+> - `pthread_ create`函数会产生一个线程ID，存放在第一个参数指向的地址中。该线程ID和前面说的线程ID不是一回事  
+>
+> - 前面讲的线程ID属于进程调度的范畴。因为线程是轻量级进程，是操作系统调度器的最小单位，所以需要一个数值来唯一表示该线程。
+>
+> - `pthread_ create`函数第一个参数指向一个虚拟内存单元，该内存单元的地址即为新创建线程的线程ID，属于NPTL线程库的范畴。线程库的后续操作，就是根据该线程ID来操作线程的  
+>
+> - 线程库NPTL提供了`pthread_ self`函数，可以获得线程自身的ID： 
+>
+>   ```cpp
+>   pthread_t pthread_self(void);
+>   ```
+>
+>   `pthread_t`到底是什么类型呢？取决于实现。对于Linux目前实现的NPTL实现而言，`pthread_t`类型的线程ID，本质就是一个进程地址空间上的一个地址.
+>
+>   **这里体现了每一个线程都有自己独立的栈结构，主线程用的是系统栈。**
+>
+>   ![image-20240225202809268](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240225202809268.png)
+>
+> - __thread参数：
+>
+>    __thread是GCC内置的线程局部存储设施，存取效率可以和全局变量相比。__thread变量每一个线程有一份独立实体，各个线程的值互不干扰。**可以用来修饰那些带有全局性且值可能变，但是又不值得用全局变量保护的变量**。‘
+>
+>   ```cpp
+>   #include<iostream>
+>   #include<pthread.h>
+>   #include<unistd.h>
+>   #include<cstring>
+>   
+>   using namespace std;
+>   
+>   __thread int g_val = 100;
+>   
+>   //int g_val = 100;
+>   
+>   std::string hexAddr(pthread_t tid)
+>   {
+>       g_val++;
+>       char buffer[64];
+>       snprintf(buffer, sizeof(buffer), "0x%x", tid);
+>   
+>       return buffer;
+>   }
+>   
+>   void *threadRoutine(void* args)
+>   {
+>       // static int a = 10;
+>       string name = static_cast<const char*>(args);
+>       int cnt = 5;
+>       while(cnt)
+>       {
+>           sleep(1);
+>           cout << name << " g_val: " << g_val++ << ", &g_val: " << &g_val << endl;
+>           
+>       }
+>       return nullptr;
+>   }
+>   
+>   int main()
+>   {
+>       pthread_t t1, t2, t3;
+>       pthread_create(&t1, nullptr, threadRoutine, (void*)"thread 1"); // 线程被创建的时候，谁先执行不确定！
+>       pthread_create(&t2, nullptr, threadRoutine, (void*)"thread 2"); // 线程被创建的时候，谁先执行不确定！
+>       pthread_create(&t3, nullptr, threadRoutine, (void*)"thread 3"); // 线程被创建的时候，谁先执行不确定!
+>   
+>       pthread_join(t1, nullptr);
+>       pthread_join(t2, nullptr);
+>       pthread_join(t3, nullptr);
+>   
+>       return 0;
+>   }
+>   
+>   ```
+>
+>   运行结果：
+>
+>   ![image-20240225203936942](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240225203936942.png)
+
+## 6.线程的同步和互斥
+
+> 
+
+## 7.进程vs线程
+
+### 7.1进程和线程
+
+> - 进程是资源分配的基本单位  
+>
+> - 线程是调度的基本单位  
+>
+> - 线程共享进程数据，但也拥有自己的一部分数据：
+>
+>   a.线程ID(LWP)
+>
+>   **b.一组寄存器:线程的上下文**,具有动态切换的概念。
+>
+>   **c.栈**：线程在处理临时数据和临时空间的时候，必须有自己的栈帧结构。**因为我们线程在执行对应的入口函数的时候，要生成对应的临时变量**，那么这时候线程就需要自己独立的栈帧，但是因为我们线程都是公用一个地址空间，一个进程地址空间只有一个栈，那么如果我们每个线程都将自己的临时数据和临时变量放入到这个栈就会造成混乱OS分辨不清楚，所以线程在处理临时数据，临时变量的时候需要自己独立的栈结构。
+>
+>   d.信号屏蔽字
+>
+>   e.调度优先级:私有属性
+>
+>   f. `errno`
+>
+> - 线程所共享的资源：
+>
+>   进程的多个线程共享 同一地址空间,因此Text Segment、Data Segment都是共享的,如果定义一个函数,在各线程中都可以调用,如果定义一个全局变量,在各线程中都可以访问到,除此之外,各线程还共享以下进程资源和环境:  
+>   a.**文件描述符**：主线程打开文件，对应的线程也是可见的。
+>
+>   b.每种信号的处理方式(SIG_IGN, SIG_DFL或者自定义的信号处理函数)
+>
+>   c.当前的工作目录
+>
+>   d.用户ID和组ID
+
