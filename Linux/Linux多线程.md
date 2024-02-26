@@ -584,22 +584,22 @@ int main()
 >   #include<pthread.h>
 >   #include<unistd.h>
 >   #include<cstring>
->     
+>       
 >   using namespace std;
->     
+>       
 >   __thread int g_val = 100;
->     
+>       
 >   //int g_val = 100;
->     
+>       
 >   std::string hexAddr(pthread_t tid)
 >   {
 >       g_val++;
 >       char buffer[64];
 >       snprintf(buffer, sizeof(buffer), "0x%x", tid);
->     
+>       
 >       return buffer;
 >   }
->     
+>       
 >   void *threadRoutine(void* args)
 >   {
 >       // static int a = 10;
@@ -609,25 +609,25 @@ int main()
 >       {
 >           sleep(1);
 >           cout << name << " g_val: " << g_val++ << ", &g_val: " << &g_val << endl;
->             
+>               
 >       }
 >       return nullptr;
 >   }
->     
+>       
 >   int main()
 >   {
 >       pthread_t t1, t2, t3;
 >       pthread_create(&t1, nullptr, threadRoutine, (void*)"thread 1"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t2, nullptr, threadRoutine, (void*)"thread 2"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t3, nullptr, threadRoutine, (void*)"thread 3"); // 线程被创建的时候，谁先执行不确定!
->     
+>       
 >       pthread_join(t1, nullptr);
 >       pthread_join(t2, nullptr);
 >       pthread_join(t3, nullptr);
->     
+>       
 >       return 0;
 >   }
->     
+>       
 >   ```
 >
 >   运行结果：
@@ -1054,7 +1054,126 @@ private:
 };
 ```
 
+## 7.常见锁的概念
 
+### 7.1死锁
+
+> - 死锁是指在一组进程中的各个进程均占有不会释放的资源，但因互相申请被其他进程所站用不会释放的资源而处于的一种永久等待状态  
+
+### 7.2死锁四个必要条件
+
+> - 互斥条件：一个资源每次只能被一个执行流使用  
+> - 请求与保持条件：一个执行流因请求资源而阻塞时，对已获得的资源保持不放  
+> - 不剥夺条件:一个执行流已获得的资源，在末使用完之前，不能强行剥夺  
+> - 循环等待条件:若干执行流之间形成一种头尾相接的循环等待资源的关系  
+
+### 7.3避免死锁
+
+> - 破坏死锁的四个必要条件
+> - 加锁顺序一致
+> - 避免锁未释放的场景
+> - 资源一次性分配
+
+## 8.Linux线程同步
+
+### 8.1条件变量
+
+> - 当一个线程互斥地访问某个变量时，它可能发现在其它线程改变状态之前，它什么也做不了  
+> - 例如一个线程访问队列时，发现队列为空，它只能等待，只到其它线程将一个节点添加到队列中。这种情况就需要用到条件变量  
+
+**条件变量的接口**
+
+> - 条件变量函数 初始化
+>
+>   ```cpp
+>   int pthread_cond_init(pthread_cond_t *restrict cond,const pthread_condattr_t *restrictattr);
+>   参数：
+>   cond：要初始化的条件变量
+>   attr：NULL
+>   ```
+>
+> - 销毁
+>
+>   ```cpp
+>   int pthread_cond_destroy(pthread_cond_t *cond)
+>   ```
+>
+> - 等待条件满足
+>
+>   ```cpp
+>   int pthread_cond_wait(pthread_cond_t *restrict cond,pthread_mutex_t *restrict mutex);
+>   参数：
+>   cond：要在这个条件变量上等待
+>   mutex：互斥量，后面详细解释
+>   ```
+>
+> - 唤醒等待
+>
+>   ```cpp
+>   int pthread_cond_broadcast(pthread_cond_t *cond);  //全局唤醒
+>   int pthread_cond_signal(pthread_cond_t *cond); //单独唤醒
+>   ```
+
+**demo**
+
+```cpp
+#include<iostream>
+#include<pthread.h>
+#include<unistd.h>
+
+
+using namespace std;
+
+const int num = 5;
+
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER; //全局变量的锁
+pthread_cond_t cond = PTHREAD_COND_INITIALIZER; //条件变量的初始化
+
+
+void* active(void* args)
+{
+    char* name = (char*) args;
+
+    while(1)
+    {
+        pthread_mutex_lock(&mutex);
+        pthread_cond_wait(&cond, &mutex);
+        cout << "我是线程：" << name << endl;
+        pthread_mutex_unlock(&mutex);
+
+    }
+}
+
+int main()
+{
+
+    pthread_t tids[num];
+
+    for(int i = 0 ; i < num; ++i)
+    {
+        char* name = new char[64];
+        snprintf(name, 64, "thread-%d", i +  1);
+        pthread_create(tids + i, nullptr, active, (void*)name);
+    }
+
+    pthread_cond_signal(&cond);
+    //pthread_cond_broadcast(&cond);
+
+    for(int i = 0 ; i < num; ++i)
+    {
+        pthread_join(tids[i], nullptr);
+    }
+
+    return 0;
+}
+```
+
+**生产者消费者模型**
+
+### 8.2同步的概念与竞态条件
+
+> - 同步：在保证数据安全的前提下，让线程能够按照某种特定的顺序访问临界资源，从而有效避免饥饿问题，叫做同步  
+> - 竞态条件：因为时序问题，而导致程序异常，我们称之为竞态条件。在线程场景下，这种问题也不难理解
 
 ## 7.进程vs线程
 
@@ -1088,4 +1207,6 @@ private:
 >   c.当前的工作目录
 >
 >   d.用户ID和组ID
+
+
 
