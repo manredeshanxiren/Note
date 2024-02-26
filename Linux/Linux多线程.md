@@ -584,22 +584,22 @@ int main()
 >   #include<pthread.h>
 >   #include<unistd.h>
 >   #include<cstring>
->   
+>     
 >   using namespace std;
->   
+>     
 >   __thread int g_val = 100;
->   
+>     
 >   //int g_val = 100;
->   
+>     
 >   std::string hexAddr(pthread_t tid)
 >   {
 >       g_val++;
 >       char buffer[64];
 >       snprintf(buffer, sizeof(buffer), "0x%x", tid);
->   
+>     
 >       return buffer;
 >   }
->   
+>     
 >   void *threadRoutine(void* args)
 >   {
 >       // static int a = 10;
@@ -609,25 +609,25 @@ int main()
 >       {
 >           sleep(1);
 >           cout << name << " g_val: " << g_val++ << ", &g_val: " << &g_val << endl;
->           
+>             
 >       }
 >       return nullptr;
 >   }
->   
+>     
 >   int main()
 >   {
 >       pthread_t t1, t2, t3;
 >       pthread_create(&t1, nullptr, threadRoutine, (void*)"thread 1"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t2, nullptr, threadRoutine, (void*)"thread 2"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t3, nullptr, threadRoutine, (void*)"thread 3"); // 线程被创建的时候，谁先执行不确定!
->   
+>     
 >       pthread_join(t1, nullptr);
 >       pthread_join(t2, nullptr);
 >       pthread_join(t3, nullptr);
->   
+>     
 >       return 0;
 >   }
->   
+>     
 >   ```
 >
 >   运行结果：
@@ -636,7 +636,425 @@ int main()
 
 ## 6.线程的同步和互斥
 
-> 
+> - 临界资源：多线程执行流共享的资源就叫做临界资源  
+> - 临界区：每个线程内部，访问临界资源的代码，就叫做临界区  
+> - 互斥：任何时刻，互斥保证有且只有一个执行流进入临界区，访问临界资源，通常对临界资源起保护作用  
+> - 原子性（后面讨论如何实现）：不会被任何调度机制打断的操作，该操作只有两态，要么完成，要么未完成  
+
+### 6.1互斥量mutex
+
+> - 大部分情况，线程使用的数据都是局部变量，变量的地址空间在线程栈空间内，这种情况，变量归属单个线程，其他线程无法获得这种变量  
+> - 但有时候，很多变量都需要在线程间共享，这样的变量称为共享变量，可以通过数据的共享，完成线程之间的交互 
+> - 多个线程并发的操作共享变量，会带来一些问题  
+>
+> **两种初始化方式：**
+>
+> - 局部：
+>
+>   需要调用对应的初始化函数，并且需要对mutex进行destroy
+>
+>   ```cpp
+>   pthread_mutex_init(&mutex, nullptr);
+>   ```
+>
+> - 全局：
+>
+>   我们直接使用这个宏进行初始化，而不需要调用对应的初始化函数。同时这种方式不需要对mutex进行destroy
+>
+>   ```cpp
+>   pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+>   ```
+>
+> **细节：**
+>
+> - 凡是访问同一个临界资源的线程，都要进行加锁保护，而且必须加同一把锁，这个是一个游戏规则，不能有例外
+>
+> - 每一个线程访问临界区之前，得加锁，加锁本质是给 临界区 加锁，加锁的粒度尽量要细一些
+>
+> - 线程访问临界区的时候，需要先加锁->所有线程都必须要先看到同一把锁->锁本身就是公共资源->锁如何保证自己的安全？
+>
+>   -> 加锁和解锁本身就是原子的！
+>
+> - 临界区可以是一行代码，可以是一批代码，
+>
+>   a. 线程可能被切换吗？当然可能， 不要特殊化加锁和解锁，还有临界区代码。
+>
+>   b. 切换会有影响吗？不会，因为在我不在期间，任何人都没有办法进入临界区，因为他无法成功的申请到锁！因为锁被我拿走了！
+>
+> - 这也正是体现互斥带来的串行化的表现，站在其他线程的角度，对其他线程有意义的状态就是：锁被我申请(持有锁)，锁被我释放了(不持有锁)， 原子性就体现在这里。
+>
+> - 解锁的过程也被设计成为原子的！
+>
+> 锁的原理的理解：
+>
+> - swap和exchange指令，都是将寄存器的值和内存单元中的值进行交换。
+>
+> - 是调用的线程来执行对应的加锁和解锁代码的。
+>
+> - 寄存器的硬件只有一套，但是寄存器中的数据是每一个线程都需要的。
+>
+>   寄存器 != 寄存器的内容(执行流的上下文)；
+>
+> 从汇编的角度来理解，起始lock和unlock在汇编语句中就只有一句：
+>
+> `xchgb %al， mutex`(将寄存器al中的值和mutex中的值进行交换)和`movb $1,mutex`（向mutex中放入数字1）；
+>
+> 假设现在存在两个线程threada和threadb，同时来竞争当前的这个锁mutex(存储在内存中)
+>
+> 首先mutex初始化为1，`threada`先执行， 先将mutex中的值和寄存器交换，那么这时候mutex中的值为0，寄存器al中的值为1；那么对应的if条件判断就为真，就直接return，`threada`就会去执行对应的代码或者被时间片到了，被调度。那么这时候`threada`来的时候执行同样的寄存器和mutex值交换的时候，因为这时候寄存器和mutex的值都是0，那么交换完成，在if判断的时候为假，就进入了挂起等待。这时候其实已经达到了加锁的目的，就是我们的临界区只能同时有一个线程在运行。当`threada`执行对应的临界区代码，然后unlock，这时候将mutex中的值修改为1，这是的`threada`再次判断的时候就可以去执行对应的临界区代码了。
+>
+> ![image-20240226121504090](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240226121504090.png)
+
+### 6.3买票案例
+
+- 没有加锁的情况
+
+  ```cpp
+  #include<iostream>
+  #include<pthread.h>
+  #include<unistd.h>
+  #include<cstring>
+  
+  using namespace std;
+  
+  int ticket = 1000;
+  
+  
+  void* ThreadRoutine(void* args)
+  {
+      string name = static_cast<char*>(args);
+  
+      while(true)
+      {
+  
+          if(ticket > 0)
+          {
+              usleep(1000);
+              cout << "我是" << name << "还剩" << ticket-- << "张票" << endl;
+          }
+  
+  
+          usleep(500);
+      }
+  
+      return nullptr;
+  }
+  
+  int main()
+  {
+  
+      pthread_t t[4];
+  
+      int n = sizeof(t) / sizeof(t[0]);
+  
+      for(int i = 0; i < n; ++i)
+      {
+          char* date = new char[64];
+          snprintf(date, 64, "thread%d", i + 1);
+          pthread_create(t + i, nullptr, ThreadRoutine, date);
+      }
+  
+  
+      for(int i = 0; i < n; ++i)
+      {
+          pthread_join(t[i], nullptr);
+      }
+  
+      return 0;
+  }
+  ```
+
+  运行结果：
+
+  ![image-20240225210501300](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240225210501300.png)
+
+- 加锁
+
+  ```cpp
+  #include<iostream>
+  #include<pthread.h>
+  #include<unistd.h>
+  #include<cstring>
+  
+  using namespace std;
+  
+  int ticket = 1000;
+  
+  pthread_mutex_t mutex; // 后面说
+  
+  void* ThreadRoutine(void* args)
+  {
+      string name = static_cast<char*>(args);
+  
+      while(true)
+      {
+          pthread_mutex_lock(&mutex);
+          if(ticket > 0)
+          {
+              usleep(1000);
+              cout << "我是" << name << "还剩" << ticket-- << "张票" << endl;
+              pthread_mutex_unlock(&mutex);
+          }
+          else 
+          {
+              pthread_mutex_unlock(&mutex);
+          }
+          usleep(500);
+      }
+  
+      return nullptr;
+  }
+  
+  int main()
+  {
+  
+      pthread_t t[4];
+  
+      pthread_mutex_init(&mutex, nullptr);
+  
+      int n = sizeof(t) / sizeof(t[0]);
+  
+      for(int i = 0; i < n; ++i)
+      {
+          char* date = new char[64];
+          snprintf(date, 64, "thread%d", i + 1);
+          pthread_create(t + i, nullptr, ThreadRoutine, date);
+      }
+  
+  
+      for(int i = 0; i < n; ++i)
+      {
+          pthread_join(t[i], nullptr);
+      }
+  
+      pthread_mutex_destroy(&mutex);
+  
+      return 0;
+  }
+  ```
+
+  运行结果：
+
+  ![image-20240225210909537](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240225210909537.png)
+  
+  那么上面的案例是一个全局锁的案例，我们实现一个将锁声明在主函数内部的案例：
+  
+  这里我们使用了一个`Tdata`的类将线程的name和mutex一并存储在类的属性中，那么我们在传给线程的进入函数的时候只需要将`Tdata`类传入这个函数即可。
+  
+  ```cpp
+  #include<iostream>
+  #include<pthread.h>
+  #include<unistd.h>
+  #include<cstring>
+  
+  using namespace std;
+  
+  
+  int ticket = 10000;
+  
+  //pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+  
+  class Tdata
+  {
+      public:
+      Tdata(char* name, pthread_mutex_t mutex):_name(name),_mutex(mutex)
+      {}
+  
+      ~Tdata()
+      {}
+  
+      public:
+      char* _name;
+      pthread_mutex_t _mutex;
+  };
+  
+  void* ThreadRun(void* args)
+  {
+      Tdata* Td = static_cast<Tdata*>(args);
+      while(1)
+      {
+          usleep(100);
+          pthread_mutex_lock(&Td->_mutex);
+          if(ticket > 0)
+          {
+              cout << "我是" << Td->_name << "我买票了,还有" << --ticket <<"张票" << endl;
+              pthread_mutex_unlock(&Td->_mutex);
+          }
+          else 
+          {
+              pthread_mutex_unlock(&Td->_mutex);
+              break;
+          }
+          usleep(100);
+      }      
+      return nullptr;
+  }
+  
+  
+  int main()
+  {
+  
+      pthread_t tids[4];
+      pthread_mutex_t mutex;
+  
+      for(int i = 0; i < 4; ++i)
+      {
+          char* name = new char[64];
+          snprintf(name, 64, "thread:%d", i + 1);
+          Tdata* tdata = new Tdata(name, mutex);
+          pthread_create(tids + i, nullptr, ThreadRun, (void*)tdata);
+      }
+  
+  
+      for(int i = 0; i < 4; ++i)
+      {
+          pthread_join(tids[i], nullptr);
+      }
+  
+      cout << "all pthread quit successed" << endl;
+      while(1)
+      {
+          sleep(1);
+      }
+      return 0;
+  }
+  ```
+  
+  运行截图：
+  
+  ![image-20240226115840923](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240226115840923.png)
+
+### 6.4demo版线程封装
+
+```cpp
+#pragma once
+
+class Thread
+{
+
+public:
+    typedef enum
+    {
+        NEW = 0,
+        RUNING,
+        EXIT
+    }ThreadStatus;
+
+    typedef void* (*func_t)(void*);
+
+    Thread(int mum, func_t func, void* args) :_tid(0), _status(NEW), _func(func),_args(args) 
+    {
+        char name[128];
+        snprintf(name, sizeof name, "thread-%d", _tid);
+        _name = name;
+    }
+
+    int status() {  return _status; }
+    string thread_name(){   return _name; }
+
+    pthread_t threadid()
+    {
+        if(_status == RUNING)
+        {
+            return _tid;
+        }
+
+        else return 0;
+    }
+
+    static void* runHelper(void* args)
+    {
+        Thread* ts = (Thread*) args; //通过这种方式拿到对象
+        (*ts)();
+        return nullptr;
+    }
+
+    void operator()()
+    {
+        if(_func != nullptr) _func(_args); //使用仿函数的方式运行对应的线程进入函数
+    }
+
+    void run()
+    {
+        int n = pthread_create(&_tid, nullptr, runHelper, this);
+        if(n != 0) exit;
+        _status = RUNING;
+    }
+
+    void join()
+    {
+        int n = pthread_join(_tid, nullptr);
+
+        if(n != 0)
+        {
+            cerr << "main thread join error:"  << _name << endl;
+            return ;
+        }
+        _status = EXIT;
+    }
+
+    ~Thread()
+    {}
+
+
+public:
+    pthread_t _tid;
+    string _name;
+    func_t _func; //线程未来要执行的回调
+    void* _args;
+    ThreadStatus _status;
+};
+```
+
+### 6.5demo版锁的封装
+
+```cpp
+#pragma
+
+class Mutex
+{
+public:
+    Mutex(pthread_mutex_t* pthread) : _pthread(pthread)
+    {}
+
+    void lock()
+    {
+        pthread_mutex_lock(_pthread);
+    }
+
+    void unlock()
+    {
+        pthread_mutex_unlock(_pthread);
+    }
+
+    ~Mutex()
+    {}
+private:
+    pthread_mutex_t * _pthread;
+
+};
+
+
+class lockGuard
+{
+public:
+
+    lockGuard(pthread_mutex_t* mutex) :_mutex(mutex)
+    {
+        _mutex.lock();
+    }
+
+    ~lockGuard()
+    {
+        _mutex.unlock();
+    }
+
+private:
+    Mutex _mutex;
+};
+```
+
+
 
 ## 7.进程vs线程
 
