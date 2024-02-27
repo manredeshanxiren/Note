@@ -584,22 +584,22 @@ int main()
 >   #include<pthread.h>
 >   #include<unistd.h>
 >   #include<cstring>
->       
+>               
 >   using namespace std;
->       
+>               
 >   __thread int g_val = 100;
->       
+>               
 >   //int g_val = 100;
->       
+>               
 >   std::string hexAddr(pthread_t tid)
 >   {
 >       g_val++;
 >       char buffer[64];
 >       snprintf(buffer, sizeof(buffer), "0x%x", tid);
->       
+>               
 >       return buffer;
 >   }
->       
+>               
 >   void *threadRoutine(void* args)
 >   {
 >       // static int a = 10;
@@ -609,25 +609,25 @@ int main()
 >       {
 >           sleep(1);
 >           cout << name << " g_val: " << g_val++ << ", &g_val: " << &g_val << endl;
->               
+>                       
 >       }
 >       return nullptr;
 >   }
->       
+>               
 >   int main()
 >   {
 >       pthread_t t1, t2, t3;
 >       pthread_create(&t1, nullptr, threadRoutine, (void*)"thread 1"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t2, nullptr, threadRoutine, (void*)"thread 2"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t3, nullptr, threadRoutine, (void*)"thread 3"); // 线程被创建的时候，谁先执行不确定!
->       
+>               
 >       pthread_join(t1, nullptr);
 >       pthread_join(t2, nullptr);
 >       pthread_join(t3, nullptr);
->       
+>               
 >       return 0;
 >   }
->       
+>               
 >   ```
 >
 >   运行结果：
@@ -1170,10 +1170,306 @@ int main()
 
 **生产者消费者模型**
 
+基于`blockqueue`实现的多生产者消费者模型
+
+三种关系：
+
+- 生产者和生产者--- 互斥关系
+
+- 消费者和消费者---互斥关系
+- 生产者和消费者---同步关系和互斥关系
+
+两个角色：
+
+- 生产者
+- 消费者
+
+一个交易场所：
+
+- 通常是缓冲区
+
+细节：
+
+- 一定要保证，在任何时候，都是符合条件，才进行生产
+- 要让线程进行休眠等待，不能持有锁等待！
+- 当线程醒来的时候，注定了继续从临界区内部继续运行！因为我是在临界区被切走的！
+- 注定了当线程被唤醒的时候，继续在`pthread_cond_wait`函数出向后运行，又要重新申请锁，申请成功才会彻底返回
+
+为何这样的方式高效？
+
+因为这样的`blockqueue`的方式允许生产消费的步调可以不一致，也就是说提供了一种特定的缓冲区。
+
+从某种程度上来说允许了多个消费者的并行，多个生产者的并行。
+
+```cpp
+//main.cc
+#include<iostream>
+#include<queue>
+#include<pthread.h>
+#include<mutex>
+#include<unistd.h>
+#include<ctime>
+
+using namespace std;
+
+#include"blockqueue.hpp"
+#include"Task.hpp"
+
+void* Consumer(void* args)
+{
+    BlockQueue<Task> *q = static_cast<BlockQueue<Task> *>(args);
+
+    while(true)
+    {
+        // 1.从q中拿出任务
+        Task t;
+        q->pop(&t);
+
+        t(); // 内部写仿函数用于计算任务
+
+        cout << pthread_self() << "| consumer data : " << t.formatArgs() << t.formatRes() << endl;
+    }
+
+
+}
+
+void* Product(void* args)
+{
+    BlockQueue<Task> *q = static_cast<BlockQueue<Task> *>(args);
+    string opers = "+-*/%";
+    while(true)
+    {
+
+        int x = rand() % 20 + 1;
+        int y = rand() % 10 + 1;
+        char op = opers[rand() % opers.size()];
+        Task t(x, y, op);
+
+        q->push(t);
+
+        cout << pthread_self() << "| Product Task: " << t.formatArgs() << "?"<< endl;
+    }
+
+}
+
+int main()
+{
+    srand((uint64_t)time(nullptr) % getpid());
+
+    BlockQueue<Task>* bq = new BlockQueue<Task>(); 
+
+    pthread_t c[2], p[3];
+
+    pthread_create(&c[0], nullptr, Consumer, bq);
+    pthread_create(&c[1], nullptr, Consumer, bq);
+    pthread_create(&p[0], nullptr, Product, bq);
+    pthread_create(&p[1], nullptr, Product, bq);
+    pthread_create(&p[2], nullptr, Product, bq);
+
+
+    pthread_join(c[0], nullptr);
+    pthread_join(c[1], nullptr);
+    pthread_join(p[0], nullptr);
+    pthread_join(p[1], nullptr);
+    pthread_join(p[2], nullptr);
+
+    delete bq;
+
+    return 0;
+}
+
+//Task.hpp
+
+class Task
+{
+public:
+    Task()
+    {}
+
+    Task(int x, int y, char op):_x(x), _y(y), _op(op), _result(0), _exitcode(0)
+    {}
+
+    void operator()()
+    {
+        switch(_op)
+        {
+            case '+':
+                _result = _x + _y;
+                break;
+            case '-':
+                _result = _x - _y;
+                break;
+            case '*':
+                _result = _x * _y;
+                break;
+            case '/':
+                {
+                    if(_y == 0) 
+                    _exitcode = -1; //表示除零错误
+                    else 
+                    _result = _x /_y;
+                }    
+                break;                  
+            case '%':
+                {
+                    if(_y == 0) 
+                    _exitcode = -1; //表示除零错误
+                    else 
+                    _result = _x % _y;
+                }  
+            default:   
+                break;            
+        }
+    }
+    string formatArgs()
+    {
+        return to_string(_x) + _op + to_string(_y) + "=";
+    }
+
+    string formatRes()
+    {
+        return to_string(_result) + '(' + to_string(_exitcode) + ')';
+    }
+    ~Task()
+    {
+
+    }
+
+private:
+    int _x;        //运算数
+    int _y;        //运算数
+    char _op;      //操作符
+    int _result;   //存储计算结果
+    int _exitcode; //退出码
+};
+
+//blockqueue.hpp
+template<class T>
+class BlockQueue
+{
+public:
+    BlockQueue(int cap = 5):_cap(cap)
+    {
+        pthread_mutex_init(&_mutex, nullptr);
+        pthread_cond_init(&_ConsumerCond, nullptr);
+        pthread_cond_init(&_ProductCond,nullptr);
+    }
+    bool isfull(){  return _q.size() == _cap; }
+    bool isempty(){ return _q.empty(); }
+
+    void push(const T data)
+    {
+        pthread_mutex_lock(&_mutex);
+        while(isfull()) //用while的原因是可以保证防止被误唤醒的情况
+        {
+            pthread_cond_wait(&_ConsumerCond, &_mutex);
+        }
+
+        _q.push(data);
+
+        pthread_cond_signal(&_ProductCond);
+        pthread_mutex_unlock(&_mutex);
+    }
+
+    void pop(T* out)
+    {
+        pthread_mutex_lock(&_mutex);
+        while(isempty())
+        {
+            pthread_cond_wait(&_ProductCond, &_mutex);
+        }
+
+        *out = _q.front();
+        _q.pop();
+        pthread_cond_signal(&_ConsumerCond);
+
+        pthread_mutex_unlock(&_mutex);
+    }
+    ~BlockQueue()
+    {
+        pthread_mutex_destroy(&_mutex);
+        pthread_cond_destroy(&_ConsumerCond);
+        pthread_cond_destroy(&_ProductCond);
+    }
+
+private:
+    queue<T> _q;
+    int _cap;
+    pthread_mutex_t _mutex;
+    pthread_cond_t _ConsumerCond;
+    pthread_cond_t _ProductCond;
+
+};
+```
+
 ### 8.2同步的概念与竞态条件
 
 > - 同步：在保证数据安全的前提下，让线程能够按照某种特定的顺序访问临界资源，从而有效避免饥饿问题，叫做同步  
 > - 竞态条件：因为时序问题，而导致程序异常，我们称之为竞态条件。在线程场景下，这种问题也不难理解
+
+## 9.POSIX信号量
+
+> POSIX信号量和SystemV信号量作用相同，都是用于同步操作，达到无冲突的访问共享资源目的。 但POSIX可以用于线程间同步。  
+>
+> - 用于描述临界资源中资源数目的
+> - 每一个线程，在访问对应的资源的时候，线程申请信号量，申请成功，表示该线程允许使用该资源，申请不成功，目前无法使用该资源！
+> - 信号量的工作机制：信号量机制类似于我们看电影买票，是一种资源的预定机制。
+> - 信号量已经是资源的计数器了，申请信号量成功，本身就表明资源可用！申请信号量失败的本身表明资源不可用---本质就是把判断转化为信号量的申请行为！
+
+### 9.1接口
+
+- 初始化信号量
+
+  ```cpp
+   #include <semaphore.h>
+    int sem_init(sem_t *sem, int pshared, unsigned int value);
+    参数：
+    pshared:0表示线程间共享，非零表示进程间共享
+    value：信号量初始值
+  ```
+
+- 销毁信号量
+
+  ```
+  int sem_destroy(sem_t *sem);
+  ```
+
+- 等待信号量
+
+  ```cpp
+  功能：等待信号量，会将信号量的值减1
+  int sem_wait(sem_t *sem); //P()
+  ```
+
+- 发布信号量
+
+  ```cpp
+  功能：发布信号量，表示资源使用完毕，可以归还资源了。将信号量值加1。
+  int sem_post(sem_t *sem);//V()
+  ```
+
+### 9.2基于环形队列的生产消费模型  
+
+> - 环形队列采用数组模拟，用模运算来模拟环状特性  
+>
+>   ![image-20240227195538957](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240227195538957.png)
+>
+> - 环形结构起始状态和结束状态都是一样的，不好判断为空或者为满，所以可以通过加计数器或者标记位来判断满或者空。另外也可以预留一个空的位置，作为满的状态  
+>
+>   ![image-20240227195552171](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240227195552171.png)
+>
+> - 细节：
+>
+>   a.因为只有为空和为满的情况，cp才会指向同一个位置
+>
+>   b.其他情况，cp可以并发运行
+>
+>   c.我们要保证游戏规则，同时也要保证满的时候的策略问题
+>
+>   d.空的时候，生产者先运行，满的时候，消费者先运行。
+>
+>   e.不能让生产者套圈消费者，不能让消费者超过生产者。
+>
 
 ## 7.进程vs线程
 
