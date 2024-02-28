@@ -584,22 +584,22 @@ int main()
 >   #include<pthread.h>
 >   #include<unistd.h>
 >   #include<cstring>
->               
+>                   
 >   using namespace std;
->               
+>                   
 >   __thread int g_val = 100;
->               
+>                   
 >   //int g_val = 100;
->               
+>                   
 >   std::string hexAddr(pthread_t tid)
 >   {
 >       g_val++;
 >       char buffer[64];
 >       snprintf(buffer, sizeof(buffer), "0x%x", tid);
->               
+>                   
 >       return buffer;
 >   }
->               
+>                   
 >   void *threadRoutine(void* args)
 >   {
 >       // static int a = 10;
@@ -609,25 +609,25 @@ int main()
 >       {
 >           sleep(1);
 >           cout << name << " g_val: " << g_val++ << ", &g_val: " << &g_val << endl;
->                       
+>                           
 >       }
 >       return nullptr;
 >   }
->               
+>                   
 >   int main()
 >   {
 >       pthread_t t1, t2, t3;
 >       pthread_create(&t1, nullptr, threadRoutine, (void*)"thread 1"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t2, nullptr, threadRoutine, (void*)"thread 2"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t3, nullptr, threadRoutine, (void*)"thread 3"); // 线程被创建的时候，谁先执行不确定!
->               
+>                   
 >       pthread_join(t1, nullptr);
 >       pthread_join(t2, nullptr);
 >       pthread_join(t3, nullptr);
->               
+>                   
 >       return 0;
 >   }
->               
+>                   
 >   ```
 >
 >   运行结果：
@@ -1471,38 +1471,1144 @@ private:
 >   e.不能让生产者套圈消费者，不能让消费者超过生产者。
 >
 
-## 7.进程vs线程
+单CP：
 
-### 7.1进程和线程
+只需要一对信号量，然后分别对环形队列中的空间和数据进行维护。
 
-> - 进程是资源分配的基本单位  
->
-> - 线程是调度的基本单位  
->
-> - 线程共享进程数据，但也拥有自己的一部分数据：
->
->   a.线程ID(LWP)
->
->   **b.一组寄存器:线程的上下文**,具有动态切换的概念。
->
->   **c.栈**：线程在处理临时数据和临时空间的时候，必须有自己的栈帧结构。**因为我们线程在执行对应的入口函数的时候，要生成对应的临时变量**，那么这时候线程就需要自己独立的栈帧，但是因为我们线程都是公用一个地址空间，一个进程地址空间只有一个栈，那么如果我们每个线程都将自己的临时数据和临时变量放入到这个栈就会造成混乱OS分辨不清楚，所以线程在处理临时数据，临时变量的时候需要自己独立的栈结构。
->
->   d.信号屏蔽字
->
->   e.调度优先级:私有属性
->
->   f. `errno`
->
-> - 线程所共享的资源：
->
->   进程的多个线程共享 同一地址空间,因此Text Segment、Data Segment都是共享的,如果定义一个函数,在各线程中都可以调用,如果定义一个全局变量,在各线程中都可以访问到,除此之外,各线程还共享以下进程资源和环境:  
->   a.**文件描述符**：主线程打开文件，对应的线程也是可见的。
->
->   b.每种信号的处理方式(SIG_IGN, SIG_DFL或者自定义的信号处理函数)
->
->   c.当前的工作目录
->
->   d.用户ID和组ID
+**什么时候用锁，什么时候用sem？你对应的临界资源，是否被整体使用！**
+
+1.生产者和消费者关心的“资源”，是一样的吗？
+
+​	不一样，生产者关心空间，消费者关心的是数据
+
+2.只要信号不为0，表示资源可用，表示线程可访问
+
+3.环形队列只要我们访问不同的区域，生产和消费希望可以同时进行吗？可以
+
+```cpp
+//RingQueue.hpp
+const int N = 5;
+
+template<class T>
+class RingQueue
+{
+
+private:
+    //P操作
+    void P(sem_t &m)
+    {
+        sem_wait(&m);
+    }
+    //V操作
+    void V(sem_t &m)
+    {
+        sem_post(&m);
+    }
+public:
+    RingQueue(int num = N):_cap(num),_start_step(0), _end_step(0)
+    {
+        sem_init(&_data_sem, 0, 0);  //数据初始量为零
+        sem_init(&_space_sem, 0, _cap); //空间初始量为_cap
+    }
+    void push(const T& in)
+    {
+        P(_space_sem);     //p操作之后不需要判断是否有资源，因为p操作通过之后一定有资源
+        _v[_end_step++] = in;
+        _end_step %= _cap;
+        V(_data_sem);
+    }
+
+    void pop(T* out)
+    {
+        P(_data_sem);
+        *out = _v[_start_step++];
+        _start_step %= _cap;
+        V(_space_sem);
+    }
+
+    ~RingQueue()
+    {
+        sem_destroy(&_data_sem);
+        sem_destroy(&_space_sem);
+    }
+
+private:
+    vector<T> _v;  //用于模拟环形队列
+    sem_t _data_sem; //表示数据的信号量
+    sem_t _space_sem; //表示空间的信号量
+    int _cap;                //表示环形队列的大小
+    int _start_step;        //表示消费者的位置
+    int _end_step;          //表示生产者的位置
+
+};
+
+//Main.cc
+
+#include<iostream>
+#include<pthread.h>
+#include<vector>
+#include<semaphore.h>
+#include<ctime>
+#include<unistd.h>
+
+using namespace std;
+
+#include"RingQueue.hpp"
+
+void* consumerRoutine(void* args)
+{
+    RingQueue<int>* rq = static_cast<RingQueue<int>*>(args);
+    while(true)
+    {
+        sleep(1);
+        int data;
+        rq->pop(&data);
+        cout << "我是消费者，我拿到了数据：" << data << endl;
+
+    }
+
+}
+void* productRoutine(void* args)
+{
+    RingQueue<int>* rq = static_cast<RingQueue<int>*>(args);
+    while(true)
+    {
+        int data = rand() % 100;
+        rq->push(data);
+        cout << "我是生产者，我放了数据：" << data << endl;
+    }
+
+}
+
+
+int main()
+{
+    pthread_t c, p;
+    RingQueue<int>* rq = new RingQueue<int>();
+    srand(time(nullptr) ^ getpid());
+
+    pthread_create(&c, nullptr, consumerRoutine, rq);
+    pthread_create(&p, nullptr, productRoutine, rq);
+
+
+
+    pthread_join(c, nullptr);
+    pthread_join(p, nullptr);
+
+
+    return 0;
+}
+
+
+```
+
+**多CP:**
+
+首先在上面的基础上，我们要为程序加锁，目的是保证消费者和消费者的互斥，生产者和生产者的互斥。
+
+多CP的意义在哪里呢？
+
+意义绝对不在从缓冲区冲放入和拿去，意义在于，放前并发构建Task，获取后多线程可以并发处理task，因为这些操作没有加锁！
+
+```cpp
+//Main.cc
+
+#include<iostream>
+#include<pthread.h>
+#include<vector>
+#include<semaphore.h>
+#include<ctime>
+#include<unistd.h>
+#include<cstring>
+
+using namespace std;
+
+#include"RingQueue.hpp"
+#include"Task.hpp"
+
+string opers = "+-*/%";
+
+void* consumerRoutine(void* args)
+{
+    RingQueue<Task>* rq = static_cast<RingQueue<Task>*>(args);
+    while(true)
+    {
+        sleep(1);
+        //int data;
+        Task t;
+        rq->pop(&t);
+        t();
+        cout << "我是消费者，我拿到了任务，并且计算完成：" << t.formatArgs() << t.formatRes() << endl;
+
+    }
+
+}
+void* productRoutine(void* args)
+{
+    RingQueue<Task>* rq = static_cast<RingQueue<Task>*>(args);
+    while(true)
+    {
+        //int data = rand() % 100;
+        int x = rand() % 100;
+        int y = rand() % 100;
+        char op = opers[rand() % opers.size()];
+        Task t(x, y, op);
+        rq->push(t);
+        cout << "我是生产者，我放了任务：" << t.formatArgs()  << "?" << endl;
+    }
+
+}
+
+
+int main()
+{
+    pthread_t c[2], p[3];
+    RingQueue<Task>* rq = new RingQueue<Task>();
+    srand(time(nullptr) ^ getpid());
+
+    pthread_create(&c[0], nullptr, consumerRoutine, rq);
+    pthread_create(&c[1], nullptr, consumerRoutine, rq);
+    pthread_create(&p[0], nullptr, productRoutine, rq);
+    pthread_create(&p[1], nullptr, productRoutine, rq);
+    pthread_create(&p[2], nullptr, productRoutine, rq);
+
+
+
+    pthread_join(c[0], nullptr);
+    pthread_join(c[1], nullptr);
+    pthread_join(p[0], nullptr);
+    pthread_join(p[1], nullptr);
+    pthread_join(p[2], nullptr);
+
+
+    delete rq;
+
+    return 0;
+}
+
+//Task.hpp
+
+
+class Task
+{
+public:
+    Task()
+    {}
+
+    Task(int x, int y, char op):_x(x), _y(y), _op(op), _result(0), _exitcode(0)
+    {}
+
+    void operator()()
+    {
+        switch(_op)
+        {
+            case '+':
+                _result = _x + _y;
+                break;
+            case '-':
+                _result = _x - _y;
+                break;
+            case '*':
+                _result = _x * _y;
+                break;
+            case '/':
+                {
+                    if(_y == 0) 
+                    _exitcode = -1; //表示除零错误
+                    else 
+                    _result = _x /_y;
+                }    
+                break;                  
+            case '%':
+                {
+                    if(_y == 0) 
+                    _exitcode = -1; //表示除零错误
+                    else 
+                    _result = _x % _y;
+                }  
+            default:   
+                break;            
+        }
+    }
+    string formatArgs()
+    {
+        return to_string(_x) + _op + to_string(_y) + "=";
+    }
+
+    string formatRes()
+    {
+        return to_string(_result) + '(' + to_string(_exitcode) + ')';
+    }
+    ~Task()
+    {
+
+    }
+
+private:
+    int _x;        //运算数
+    int _y;        //运算数
+    char _op;      //操作符
+    int _result;   //存储计算结果
+    int _exitcode; //退出码
+};
+
+//RingQueue.hpp
+
+const int N = 5;
+
+template<class T>
+class RingQueue
+{
+
+private:
+    //P操作
+    void P(sem_t &m)
+    {
+        sem_wait(&m);
+    }
+    //V操作
+    void V(sem_t &m)
+    {
+        sem_post(&m);
+    }
+
+    void lock(pthread_mutex_t &m)
+    {
+        pthread_mutex_lock(&m);
+    }
+
+    void unlock(pthread_mutex_t &m)
+    {
+        pthread_mutex_unlock(&m);
+    }
+public:
+    RingQueue(int num = N):_cap(num),_v(num) ,_start_step(0), _end_step(0)
+    {
+        sem_init(&_data_sem, 0, 0);  //数据初始量为零
+        sem_init(&_space_sem, 0, _cap); //空间初始量为_cap
+        pthread_mutex_init(&_con_mutex, nullptr);
+        pthread_mutex_init(&_pro_mutex, nullptr);
+    }
+    void push(const T& in)
+    {
+        P(_space_sem);     //p操作之后不需要判断是否有资源，因为p操作通过之后一定有资源
+        
+        lock(_pro_mutex);
+        _v[_end_step++] = in;
+        _end_step %= _cap;
+        unlock(_pro_mutex);
+
+        V(_data_sem);
+    }
+
+    void pop(T* out)
+    {
+        P(_data_sem);
+
+        lock(_con_mutex);
+        *out = _v[_start_step++];
+        _start_step %= _cap;
+        unlock(_con_mutex);
+
+        V(_space_sem);
+    }
+
+    ~RingQueue()
+    {
+        sem_destroy(&_data_sem);
+        sem_destroy(&_space_sem);
+        pthread_mutex_destroy(&_con_mutex);
+        pthread_mutex_destroy(&_pro_mutex);
+    }
+
+private:
+    vector<T> _v;  //用于模拟环形队列
+    sem_t _data_sem; //表示数据的信号量
+    sem_t _space_sem; //表示空间的信号量
+    int _cap;                //表示环形队列的大小
+    int _start_step;        //表示消费者的位置
+    int _end_step;          //表示生产者的位置
+
+    pthread_mutex_t _con_mutex;
+    pthread_mutex_t _pro_mutex;
+
+};
+```
+
+## 10.线程池
+
+①V1版本：用`vector`维护的线程池
+
+```cpp
+//threadpoolv1.hpp
+const int N = 5;
+
+template<class T>
+class ThreadPool
+{
+public:
+    ThreadPool(int num = N):_num(num),_threads(num)
+    {
+        pthread_mutex_init(&_lock, nullptr);
+        pthread_cond_init(&_cond,nullptr);
+    }
+
+    void lockQueue()
+    {
+        pthread_mutex_lock(&_lock);
+    }
+
+    void unlockQueue()
+    {
+        pthread_mutex_unlock(&_lock);
+    }
+
+    void threadWait()
+    {
+        pthread_cond_wait(&_cond, &_lock);
+    }
+
+    void threadWakeup()
+    {
+        pthread_cond_signal(&_cond);
+    }
+
+    bool isEmpty()
+    {
+        return _tasks.empty();
+    }
+
+    T popTask()
+    {
+        T t = _tasks.front();
+        _tasks.pop();
+        return t;
+    }
+
+    static void* threadRoutine(void* args)
+    {
+        pthread_detach(pthread_self());   //分离线程
+        ThreadPool<T> *tp = static_cast<ThreadPool<T> *>(args);  
+        while (true)
+        {
+            // 1. 检测有没有任务
+            // 2. 有：处理
+            // 3. 无：等待
+            // 细节：必定加锁
+            tp->lockQueue();
+            while (tp->isEmpty())
+            {
+                tp->threadWait();
+            }
+            T t = tp->popTask(); // 从公共区域拿到私有区域
+            tp->unlockQueue();
+
+            // for test
+            t();
+            std::cout << "thread handler done, result: " << t.formatRes() << std::endl;
+            // t.run(); // 处理任务，应不应该在临界区中处理？1,0
+        }
+    }
+
+    void init()
+    {
+        //
+    }
+
+    void start()
+    {
+        for(int i = 0; i < _num; ++i)
+        {
+            pthread_create(&_threads[i], nullptr, threadRoutine, this);
+        }
+    }
+
+    void TaskPush(const T &t)
+    {
+        lockQueue();
+        _tasks.push(t);
+        threadWakeup();
+        unlockQueue();
+    }
+
+    ~ThreadPool()
+    {
+        pthread_mutex_destroy(&_lock);
+        pthread_cond_destroy(&_cond);
+    }
+
+
+
+private:
+    vector<pthread_t> _threads; //用于保存线程
+    int _num;             //容量
+    queue<T> _tasks;//保存任务的队列
+    pthread_mutex_t _lock;
+    pthread_cond_t _cond; 
+};
+
+//Main.cc
+#include<iostream>
+#include<mutex>
+#include<pthread.h>
+#include<vector>
+#include<queue>
+
+using namespace std;
+
+
+#include"ThreadPoolV1.hpp"
+#include"Task.hpp"
+
+int main()
+{
+    ThreadPool<Task> *tp = new ThreadPool<Task>();
+    tp->init();
+    tp->start();
+    
+    while (true)
+    {
+        int x, y;
+        char op;
+        std::cout << "please Enter x> ";
+        std::cin >> x;
+        std::cout << "please Enter y> ";
+        std::cin >> y;
+        std::cout << "please Enter op(+-*/%)> ";
+        std::cin >> op;
+
+        Task t(x, y, op);
+        tp->TaskPush(t);
+
+        // 充当生产者, 从网络中读取数据，构建成为任务，推送给线程池
+        // sleep(1);
+        // tp->pushTask();
+    }
+
+    return 0;
+}
+```
+
+②V2版本，加入我们封装的`Thread.hpp`
+
+```cpp
+//Thread.hpp
+#pragma once
+
+class Thread
+{
+
+public:
+    typedef enum
+    {
+        NEW = 0,
+        RUNING,
+        EXIT
+    }ThreadStatus;
+
+    typedef void* (*func_t)(void*);
+
+    Thread(int mum, func_t func, void* args) :_tid(0), _status(NEW), _func(func),_args(args) 
+    {
+        char name[128];
+        snprintf(name, sizeof name, "thread-%d", _tid);
+        _name = name;
+    }
+
+    int status() {  return _status; }
+    string thread_name(){   return _name; }
+
+    pthread_t threadid()
+    {
+        if(_status == RUNING)
+        {
+            return _tid;
+        }
+
+        else return 0;
+    }
+
+    static void* runHelper(void* args)
+    {
+        Thread* ts = (Thread*) args; //通过这种方式拿到对象
+        (*ts)();
+        return nullptr;
+    }
+
+    void operator()()
+    {
+        if(_func != nullptr) _func(_args); //使用仿函数的方式运行对应的线程进入函数
+    }
+
+    void run()
+    {
+        int n = pthread_create(&_tid, nullptr, runHelper, this);
+        if(n != 0) exit;
+        _status = RUNING;
+    }
+
+    void join()
+    {
+        int n = pthread_join(_tid, nullptr);
+
+        if(n != 0)
+        {
+            cerr << "main thread join error:"  << _name << endl;
+            return ;
+        }
+        _status = EXIT;
+    }
+
+    ~Thread()
+    {}
+
+
+public:
+    pthread_t _tid;
+    string _name;
+    func_t _func; //线程未来要执行的回调
+    void* _args;
+    ThreadStatus _status;
+};
+
+//ThreadPoolV2.hpp
+
+const int N = 5;
+
+template<class T>
+class ThreadPool
+{
+public:
+    ThreadPool(int num = N):_num(num)
+    {
+        pthread_mutex_init(&_lock, nullptr);
+        pthread_cond_init(&_cond,nullptr);
+    }
+
+    void lockQueue()
+    {
+        pthread_mutex_lock(&_lock);
+    }
+
+    void unlockQueue()
+    {
+        pthread_mutex_unlock(&_lock);
+    }
+
+    void threadWait()
+    {
+        pthread_cond_wait(&_cond, &_lock);
+    }
+
+    void threadWakeup()
+    {
+        pthread_cond_signal(&_cond);
+    }
+
+    bool isEmpty()
+    {
+        return _tasks.empty();
+    }
+
+    T popTask()
+    {
+        T t = _tasks.front();
+        _tasks.pop();
+        return t;
+    }
+
+    static void* threadRoutine(void* args)
+    {
+        pthread_detach(pthread_self());   //分离线程
+        ThreadPool<T> *tp = static_cast<ThreadPool<T> *>(args);  
+        while (true)
+        {
+            // 1. 检测有没有任务
+            // 2. 有：处理
+            // 3. 无：等待
+            // 细节：必定加锁
+            tp->lockQueue();
+            while (tp->isEmpty())
+            {
+                tp->threadWait();
+            }
+            T t = tp->popTask(); // 从公共区域拿到私有区域
+            tp->unlockQueue();
+
+            // for test
+            t();
+            std::cout << "thread handler done, result: " << t.formatRes() << std::endl;
+            // t.run(); // 处理任务，应不应该在临界区中处理？1,0
+        }
+    }
+
+    void init()
+    {
+        for (int i = 0; i < _num; i++)
+        {
+            _threads.push_back(Thread(i, threadRoutine, this));
+        }
+    }
+
+    void check()
+    {
+        for (auto &t : _threads)
+        {
+            std::cout << t.thread_name() << " running..." << std::endl;
+        }
+    }
+
+    void start()
+    {
+        for (auto &t : _threads)
+        {
+            t.run();
+        }
+    }
+
+    void TaskPush(const T &t)
+    {
+        lockQueue();
+        _tasks.push(t);
+        threadWakeup();
+        unlockQueue();
+    }
+
+    ~ThreadPool()
+    {
+        pthread_mutex_destroy(&_lock);
+        pthread_cond_destroy(&_cond);
+    }
+
+
+
+private:
+    vector<Thread> _threads; //用于保存线程
+    int _num;             //容量
+    queue<T> _tasks;//保存任务的队列
+    pthread_mutex_t _lock;
+    pthread_cond_t _cond; 
+};
+
+//Main.cc
+#include<iostream>
+#include<mutex>
+#include<pthread.h>
+#include<vector>
+#include<queue>
+
+using namespace std;
+
+#include"Task.hpp"
+#include"Thread.hpp"
+#include"ThreadPoolV2.hpp"
+
+
+
+int main()
+{
+    ThreadPool<Task> *tp = new ThreadPool<Task>();
+    tp->init();
+    tp->start();
+
+    while (true)
+    {
+        int x, y;
+        char op;
+        std::cout << "please Enter x> ";
+        std::cin >> x;
+        std::cout << "please Enter y> ";
+        std::cin >> y;
+        std::cout << "please Enter op(+-*/%)> ";
+        std::cin >> op;
+
+        Task t(x, y, op);
+        tp->TaskPush(t);
+
+        // 充当生产者, 从网络中读取数据，构建成为任务，推送给线程池
+        // sleep(1);
+        // tp->pushTask();
+    }
+
+    return 0;
+}
+```
+
+③V3版本，引入我们之前写好的RAII模式的`LockGuard`;
+
+```cpp
+//ThreadPoolV3.hpp
+#pragma once
+const int N = 5;
+
+template<class T>
+class ThreadPool
+{
+public:
+    ThreadPool(int num = N):_num(num)
+    {
+        pthread_mutex_init(&_lock, nullptr);
+        pthread_cond_init(&_cond,nullptr);
+    }
+
+    void threadWait()
+    {
+        pthread_cond_wait(&_cond, &_lock);
+    }
+
+    void threadWakeup()
+    {
+        pthread_cond_signal(&_cond);
+    }
+
+    bool isEmpty()
+    {
+        return _tasks.empty();
+    }
+
+    T popTask()
+    {
+        T t = _tasks.front();
+        _tasks.pop();
+        return t;
+    }
+
+    static void* threadRoutine(void* args)
+    {
+        pthread_detach(pthread_self());   //分离线程
+        ThreadPool<T> *tp = static_cast<ThreadPool<T> *>(args);  
+        while (true)
+        {
+            // 1. 检测有没有任务
+            // 2. 有：处理
+            // 3. 无：等待
+            // 细节：必定加锁
+            T t;
+            {
+                LockGuard lockguard(&tp->_lock);
+                while (tp->isEmpty())
+                {
+                    tp->threadWait();
+                }
+                t = tp->popTask(); // 从公共区域拿到私有区域
+            }
+
+            // for test
+            t();
+            std::cout << "thread handler done, result: " << t.formatRes() << std::endl;
+            // t.run(); // 处理任务，应不应该在临界区中处理？1,0
+        }
+    }
+
+    void init()
+    {
+        for (int i = 0; i < _num; i++)
+        {
+            _threads.push_back(Thread(i, threadRoutine, this));
+        }
+    }
+
+    void check()
+    {
+        for (auto &t : _threads)
+        {
+            std::cout << t.thread_name() << " running..." << std::endl;
+        }
+    }
+
+    void start()
+    {
+        for (auto &t : _threads)
+        {
+            t.run();
+        }
+    }
+
+    void TaskPush(const T &t)
+    {
+        LockGuard lockguard(&_lock);
+        _tasks.push(t);
+        threadWakeup();
+    }
+
+    ~ThreadPool()
+    {
+        pthread_mutex_destroy(&_lock);
+        pthread_cond_destroy(&_cond);
+    }
+
+
+
+private:
+    vector<Thread> _threads; //用于保存线程
+    int _num;             //容量
+    queue<T> _tasks;//保存任务的队列
+    pthread_mutex_t _lock;
+    pthread_cond_t _cond; 
+};
+```
+
+④V4版本，引入单例模式，因为我们的理想情况是，虽然程序中可能有很多个地方都构造了对应的线程池对象，其实我们只有一个线程池实例就可以满足需求，避免造成资源浪费，并且我们更希望线程池是我们可以自行控制的，而不是别人。
+
+```cpp
+//Main.cc
+#include<iostream>
+#include<mutex>
+#include<pthread.h>
+#include<vector>
+#include<queue>
+#include<unistd.h>
+
+using namespace std;
+
+#include"Task.hpp"
+#include"Thread.hpp"
+#include"LockGuard.hpp"
+#include"ThreadPoolV4.hpp"
+
+int main()
+{
+    //ThreadPool<Task> *tp = new ThreadPool<Task>();
+    // tp->init();
+    // tp->start();
+
+    printf("0x%x\n", ThreadPool<Task>::Getinstance());
+    printf("0x%x\n", ThreadPool<Task>::Getinstance());
+    printf("0x%x\n", ThreadPool<Task>::Getinstance());
+    printf("0x%x\n", ThreadPool<Task>::Getinstance());
+    printf("0x%x\n", ThreadPool<Task>::Getinstance());
+
+
+
+    while (true)
+    {
+        int x, y;
+        char op;
+        std::cout << "please Enter x> ";
+        std::cin >> x;
+        std::cout << "please Enter y> ";
+        std::cin >> y;
+        std::cout << "please Enter op(+-*/%)> ";
+        std::cin >> op;
+
+        Task t(x, y, op);
+
+        ThreadPool<Task>::Getinstance()->TaskPush(t);
+        //tp->TaskPush(t);
+
+        usleep(1000);
+
+    }
+
+    return 0;
+}
+
+//ThreadPoolV4.hpp
+
+#pragma once
+
+
+const int N = 5;
+
+template<class T>
+class ThreadPool
+{
+
+private:
+    //将构造函数设为私有
+    ThreadPool(int num = N):_num(num)
+    {
+        pthread_mutex_init(&_lock, nullptr);
+        pthread_cond_init(&_cond,nullptr);
+    }
+    //删除对应的拷贝构造，和赋值重载
+    ThreadPool(const ThreadPool<T> &TP) = delete;
+    void operator=(const ThreadPool<T> &TP) = delete;
+public:
+    static ThreadPool<T>*Getinstance()
+    {   if(instance == nullptr)
+        {
+            LockGuard lockguard(&instance_lock);
+            if (instance == nullptr)
+            {
+                instance = new ThreadPool<T>();
+                instance->init();  // 初始化线程池
+                instance->start(); // 启动线程
+            }
+        }
+        return instance;
+    }
+
+    void threadWait()
+    {
+        pthread_cond_wait(&_cond, &_lock);
+    }
+
+    void threadWakeup()
+    {
+        pthread_cond_signal(&_cond);
+    }
+
+    bool isEmpty()
+    {
+        return _tasks.empty();
+    }
+
+    T popTask()
+    {
+        T t = _tasks.front();
+        _tasks.pop();
+        return t;
+    }
+
+    static void* threadRoutine(void* args)
+    {
+        pthread_detach(pthread_self());   //分离线程
+        ThreadPool<T> *tp = static_cast<ThreadPool<T> *>(args);  
+        while (true)
+        {
+            // 1. 检测有没有任务
+            // 2. 有：处理
+            // 3. 无：等待
+            // 细节：必定加锁
+            T t;
+            {
+                LockGuard lockguard(&tp->_lock);
+                while (tp->isEmpty())
+                {
+                    tp->threadWait();
+                }
+                t = tp->popTask(); // 从公共区域拿到私有区域
+            }
+
+            // for test
+            t();
+            std::cout << "thread handler done, result: " << t.formatRes() << std::endl;
+            // t.run(); // 处理任务，应不应该在临界区中处理？1,0
+        }
+    }
+
+    void init()
+    {
+        for (int i = 0; i < _num; i++)
+        {
+            _threads.push_back(Thread(i, threadRoutine, this));
+        }
+    }
+
+    void check()
+    {
+        for (auto &t : _threads)
+        {
+            std::cout << t.thread_name() << " running..." << std::endl;
+        }
+    }
+
+    void start()
+    {
+        for (auto &t : _threads)
+        {
+            t.run();
+        }
+    }
+
+    void TaskPush(const T &t)
+    {
+        LockGuard lockguard(&_lock);
+        _tasks.push(t);
+        threadWakeup();
+    }
+
+    ~ThreadPool()
+    {
+        pthread_mutex_destroy(&_lock);
+        pthread_cond_destroy(&_cond);
+    }
+
+private:
+    vector<Thread> _threads; //用于保存线程
+    int _num;             //容量
+    queue<T> _tasks;//保存任务的队列
+    pthread_mutex_t _lock;
+    pthread_cond_t _cond; 
+    static ThreadPool<T>* instance; //静态实例指针
+    static pthread_mutex_t instance_lock;
+};
+
+//初始化对应的静态实例指针
+template<class T>
+ThreadPool<T>* ThreadPool<T>::instance = nullptr;
+
+//初始化对应的锁
+template<class T>
+pthread_mutex_t ThreadPool<T>::instance_lock = PTHREAD_MUTEX_INITIALIZER;
+
+```
+
+## 11.STL,智能指针和线程安全
+
+**STL中的容器是否是线程安全的?**  
+
+不是.
+原因是, STL 的设计初衷是将性能挖掘到极致, 而一旦涉及到加锁保证线程安全, 会对性能造成巨大的影响.
+而且对于不同的容器, 加锁方式的不同, 性能可能也不同(例如hash表的锁表和锁桶).
+因此 STL 默认不是线程安全. 如果需要在多线程环境下使用, 往往需要调用者自行保证线程安全.
+
+**智能指针是否是线程安全的?**  
+
+对于 unique_ptr, 由于只是在当前代码块范围内生效, 因此不涉及线程安全问题.
+对于 shared_ptr, 多个对象需要共用一个引用计数变量, 所以会存在线程安全问题. 但是标准库实现的时候考虑到了这个问题, 基于原子操作(CAS)的方式保证 shared_ptr 能够高效, 原子的操作引用计数.
+
+## 12.其他常见的各种锁  
+
+> - 悲观锁：在每次取数据时，总是担心数据会被其他线程修改，所以会在取数据前先加锁（读锁，写锁，行锁等），当其他线程想要访问数据时，被阻塞挂起.
+> -  乐观锁：每次取数据时候，总是乐观的认为数据不会被其他线程修改，因此不上锁。但是在更新数据前，会判断其他数据在更新前有没有对数据进行修改。主要采用两种方式：版本号机制和CAS操作.
+> -  CAS操作：当需要更新数据时，判断当前内存值和之前取得的值是否相等。如果相等则用新值更新。若不等则失败，失败则重试，一般是一个自旋的过程，即不断重试 .
+> - 自旋锁:**是指当一个线程在获取锁的时候，如果锁已经被其它线程获取，那么该线程将循环等待,其中是否等待取决于访问临界区要花费多长时间，然后不断的判断锁是否能够被成功获取，直到获取到锁才会退出循环。**
+
+## 13.读者写者问题
+
+**读写锁**
+
+在编写多线程的时候，有一种情况是十分常见的。那就是，有些公共数据修改的机会比较少。相比较改写，它们读的机会反而高的多。通常而言，在读的过程中，往往伴随着查找的操作，中间耗时很长。给这种代码段加锁，会极大地降低我们程序的效率。那么有没有一种方法，可以专门处理这种多读少写的情况呢？ 有，那就是读写锁。
+
+  注意：写独占，读共享，读锁优先级高  ![image-20240228211713290](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240228211713290.png)
+
+**读写锁接口**
+
+设置读写优先
+
+```cpp
+int pthread_rwlockattr_setkind_np(pthread_rwlockattr_t *attr, int pref);
+/*
+pref 共有 3 种选择
+PTHREAD_RWLOCK_PREFER_READER_NP (默认设置) 读者优先，可能会导致写者饥饿情况
+PTHREAD_RWLOCK_PREFER_WRITER_NP 写者优先，目前有 BUG，导致表现行为和
+PTHREAD_RWLOCK_PREFER_READER_NP 一致
+PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP 写者优先，但写者不能递归加锁
+*/
+```
+
+初始化
+
+```cpp
+int pthread_rwlock_init(pthread_rwlock_t *restrict rwlock,const pthread_rwlockattr_t
+*restrict attr);
+```
+
+销毁
+
+```cpp
+int pthread_rwlock_destroy(pthread_rwlock_t *rwlock);
+```
+
+加锁和解锁
+
+```cpp
+int pthread_rwlock_rdlock(pthread_rwlock_t *rwlock);
+int pthread_rwlock_wrlock(pthread_rwlock_t *rwlock);
+int pthread_rwlock_unlock(pthread_rwlock_t *rwlock);
+```
 
 
 
