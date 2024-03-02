@@ -454,7 +454,9 @@ int main()
 这个模式的结构和管理产品对象的⽅式⼗分简单，但是它的扩展性⾮常差，当我们需要新增产品的时
 候，就需要去修改⼯⼚类新增⼀个类型的产品创建逻辑，**违背了开闭原则**  。
 
-- ⼯⼚⽅法模式:在简单⼯⼚模式下新增多个⼯⼚，多个产品，每个产品对应⼀个⼯⼚。假设现在有A、B两种产品，则开两个⼯⼚，⼯⼚A负责⽣产产品A，⼯⼚B负责⽣产产品B，⽤⼾只知道产品的⼯⼚名，⽽不知道具体的产品信息，⼯⼚不需要再接收客⼾的产品类别，⽽只负责⽣产产品。  
+### 4.4⼯⼚⽅法模式
+
+在简单⼯⼚模式下新增多个⼯⼚，多个产品，每个产品对应⼀个⼯⼚。假设现在有A、B两种产品，则开两个⼯⼚，⼯⼚A负责⽣产产品A，⼯⼚B负责⽣产产品B，⽤⼾只知道产品的⼯⼚名，⽽不知道具体的产品信息，⼯⼚不需要再接收客⼾的产品类别，⽽只负责⽣产产品。  
 
 ```cpp
 class Fruit
@@ -523,7 +525,342 @@ int main()
 ```
 
 ⼯⼚⽅法模式每次增加⼀个产品时，都需要增加⼀个具体产品类和⼯⼚类，这会使得系统中类的个数
-成倍增加，在⼀定程度上增加了系统的耦合度  
+成倍增加，在⼀定程度上增加了系统的耦合度。
+
+### 4.5抽象⼯⼚模式
+
+⼯⼚⽅法模式通过引⼊⼯⼚等级结构，解决了简单⼯⼚模式中⼯⼚类职责太重的问题，但由于⼯⼚⽅法模式中的每个⼯⼚只⽣产⼀类产品，可能会导致系统中存在⼤量的⼯⼚类，势必会增加系统的开销。此时，我们可以考虑将⼀些相关的产品组成⼀个产品族（位于不同产品等级结构中功能相关联的产品组成的家族），由同⼀个⼯⼚来统⼀⽣产，这就是抽象⼯⼚模式的基本思想。
+
+```cpp
+#include<iostream>
+#include<cstdarg>
+#include<string>
+#include<memory>
+
+class Fruit
+{
+public:
+    Fruit() {}
+    virtual void name() = 0;
+};
+
+class Apple : public Fruit
+{
+public:
+    Apple() {}
+    virtual void name()
+    {
+        std::cout << "我是一个苹果" << std::endl;
+    }
+};
+
+class Banana : public Fruit
+{
+public:
+    Banana() {}
+    virtual void name()
+    {
+        std::cout << "我是一个香蕉" << std::endl;
+    }
+};
+
+class Animal
+{
+public:
+    virtual void name() = 0; //纯虚函数，要求子类必须重写
+};
+
+class Lamp : public Animal
+{
+public:
+    virtual void name()
+    {
+        std::cout << "我是山羊!!" << std::endl;
+    }
+};
+
+class Dog : public Animal
+{
+public:
+    virtual void name()
+    {
+        std::cout << "我是小狗!!" << std::endl;
+    }
+};
+
+class Factory
+{
+public:
+    virtual std::shared_ptr<Fruit> GetFruit(const std::string &name) = 0;
+    virtual std::shared_ptr<Animal> GetAnimal(const std::string &name) = 0;
+};
+
+class FruitFactory : public Factory
+{
+public:
+    virtual std::shared_ptr<Animal> GetAnimal(const std::string &name)
+    {
+        return std::shared_ptr<Animal>();
+    }
+    virtual std::shared_ptr<Fruit> GetFruit(const std::string &name)
+    {
+        if(name ==  "苹果")
+        {
+            return std::make_shared<Apple>();
+        }
+        else if(name == "香蕉")
+        {
+            return std::make_shared<Banana>();
+        }
+
+        return std::shared_ptr<Fruit>(); //相当于空指针;
+    }
+};
+
+class AnimalFactory : public Factory
+{
+public:
+    virtual std::shared_ptr<Fruit> GetFruit(const std::string &name)
+    {
+        return std::shared_ptr<Fruit>();
+    }
+    virtual std::shared_ptr<Animal> GetAnimal(const std::string &name)
+    {
+        if(name ==  "山羊")
+        {
+            return std::make_shared<Lamp>();
+        }
+        else if(name == "小狗")
+        {
+            return std::make_shared<Dog>();
+        }
+
+        return std::shared_ptr<Animal>(); //相当于空指针;
+    }
+};
+
+class FactoryProducer
+{
+public:
+    static std::shared_ptr<Factory> getFactory(const std::string &name)
+    {
+        if(name == "动物")
+        {
+            return std::make_shared<AnimalFactory>();
+        }
+        else 
+        {
+            return std::make_shared<FruitFactory>();
+        }
+    }
+};
+
+
+int main()
+{
+    std::shared_ptr<Factory> ff = FactoryProducer::getFactory("水果");
+    std::shared_ptr<Fruit> f = ff->GetFruit("香蕉");
+    f->name();
+    f = ff->GetFruit("苹果");
+    f->name();
+
+    std::shared_ptr<Factory> af = FactoryProducer::getFactory("动物");
+    std::shared_ptr<Animal> a = af->GetAnimal("山羊");
+    a->name();
+    a = af->GetAnimal("小狗");
+    a->name();
+
+    return 0;
+}
+
+//运行结果
+//[mi@lavm-5wklnbmaja PreStudy]$ ./args 
+//我是一个香蕉
+//我是一个苹果
+//我是山羊!!
+//我是小狗!!
+```
+
+  抽象⼯⼚模式适⽤于⽣产多个⼯⼚系列产品衍⽣的设计模式，增加新的产品等级结构复杂，需要对原有系统进⾏较⼤的修改，甚⾄需要修改抽象层代码，**违背了“开闭原则”**；
+
+### 4.6建造者模式
+
+建造者模式是⼀种创建型设计模式，使⽤多个简单的对象⼀步⼀步构建成⼀个复杂的对象，能够将⼀个复杂的对象的构建与它的表⽰分离，提供⼀种创建对象的最佳⽅式。**主要⽤于解决对象的构建过于复杂的问题** 。
+
+建造者模式主要基于四个核⼼类实现：  
+
+- 抽象产品类：  
+- 具体产品类：⼀个具体的产品对象类  
+- 抽象Builder类：创建⼀个产品对象所需的各个部件的抽象接⼝  
+- 具体产品的Builder类：实现抽象接⼝，构建各个部件  
+- 指挥者Director类：统⼀组建过程，提供给调⽤者使⽤，通过指挥者来构造产品  
+
+```cpp
+#include<iostream>
+#include<cstdarg>
+#include<string>
+#include<memory>
+
+//抽象类
+class Computer
+{
+public:
+    using ptr = std::shared_ptr<Computer>; //using 关键字的用法，相当于prt等价std::shared_ptr<Computer>
+    Computer() {}
+    void setBoard(const std::string &board) { _board = board; }
+    void setDisplay(const std::string &display) { _display = display; }
+    virtual void setOS() = 0; //纯虚函数，要求子类必须重写
+
+    std::string toString()   //生成构造好的电脑字符串
+    {
+        std::string computer = "Computer: \n { \n";
+        computer += "\tboard = " + _board + ",\n";
+        computer += "\tdisplay = " + _display + ",\n";
+        computer += "\tOS = " + _os + ",\n } \n";
+        return computer; 
+    }
+
+protected:
+    std::string _board;
+    std::string _display;
+    std::string _os;
+};
+
+//具体的macbook类继承抽象父类
+class MacBook : public Computer
+{
+public:
+    using ptr = std::shared_ptr<MacBook>;
+    MacBook() {}
+    virtual void setOS() //重写父类的纯虚函数
+    {
+        _os = "Max OS X12";
+    }
+};
+
+//抽象建造这类：包含创建一个产品对象的各个部件的抽象接口
+class Builder
+{
+public:
+    using ptr = std::shared_ptr<Builder>;
+    virtual void buildBoard(const std::string & board) = 0; //纯虚函数
+    virtual void buildDisplay(const std::string & display) = 0; //纯虚函数
+    virtual void buildOS() = 0;
+    virtual Computer::ptr build() = 0;
+};
+
+
+//具体的产品的具体建造者类：实现抽象接口，构建和组装各个组件
+class MacBookBuilder : public Builder
+{
+public:
+    using prt = std::shared_ptr<MacBookBuilder>;
+    MacBookBuilder(): _computer(new MacBook()) {}; //构造一个具体的实例
+    virtual void buildBoard(const std::string & board)
+    {
+        _computer->setBoard(board);
+    }
+    virtual void buildDisplay(const std::string & display)
+    {
+        _computer->setDisplay(display);
+    }
+    virtual void buildOS()
+    {
+         _computer->setOS(); //无参
+    }
+
+    virtual Computer::ptr build()
+    {
+        return _computer;
+    }
+private:
+    Computer::ptr _computer;  //类型是std::shared_ptr<Computer>
+};
+
+//指挥者类，提供给调用者使用，通过指挥者来构造复杂产品
+class Director
+{
+public:
+    Director(Builder* builder):_builder(builder){}
+    void construct(const std::string & board, const std::string & display)
+    {
+        _builder->buildBoard(board);
+        _builder->buildDisplay(display);
+        _builder->buildOS();
+    }
+
+private:
+    Builder::ptr _builder;
+};
+
+
+int main()
+{
+    Builder *builder = new MacBookBuilder(); // 先构造一个具体的电脑builder类
+    std::unique_ptr<Director> dp(new Director(builder)); //构造一个指挥者类
+    dp->construct("华硕主板", "飞利浦显示器");
+    Computer::ptr computer = builder->build(); //将builder构建出来的电脑实例用一个对象指针来接受
+    std::cout << computer->toString(); //打印出对应的电脑信息
+
+    return 0;
+}
+```
+
+### 4.7代理模式  
+
+代理模式指代理控制对其他对象的访问，也就是代理对象控制对原对象的引⽤。在某些情况下，⼀个对象不适合或者不能直接被引⽤访问，⽽代理对象可以在客⼾端和⽬标对象之间起到中介的作⽤。代理模式的结构包括⼀个是真正的你要访问的对象(⽬标类)、⼀个是代理对象。⽬标对象与代理对象实现同⼀个接⼝，先访问代理类再通过代理类访问⽬标对象。代理模式分为静态代理、动态代理： 
+
+- 静态代理指的是，在编译时就已经确定好了代理类和被代理类的关系。也就是说，在编译时就已经确定了代理类要代理的是哪个被代理类。
+- 动态代理指的是，在运⾏时才动态⽣成代理类，并将其与被代理类绑定。这意味着，在运⾏时才能
+  确定代理类要代理的是哪个被代理类 。
+
+以租房为例，房东将房⼦租出去，但是要租房⼦出去，需要发布招租启⽰，带⼈看房，负责维修，这些⼯作中有些操作并⾮房东能完成，因此房东为了图省事，将房⼦委托给中介进⾏租赁。代理模式实现。    
+
+```cpp
+//代理模式
+class RentHouse
+{
+public:
+    virtual void rentHouse() = 0; //纯虚函数子类必须实现
+};
+
+//中介
+class Landlord : public RentHouse
+{
+public:
+    void rentHouse()
+    {
+        std::cout << "将房子租出去\n";
+    }
+};
+
+//中介代理类
+class Intermediary : public RentHouse
+{
+public:
+    void rentHouse()
+    {
+        std::cout << "发布招租启示\n";
+        std::cout << "带人看房\n";
+        _landlord.rentHouse();
+        std::cout << "负责租后维修\n";
+    }
+
+private:
+    Landlord _landlord;
+};
+
+int main()
+{
+    Intermediary intermediary;
+
+    intermediary.rentHouse();
+
+    return 0;
+}
+```
+
+
 
 
 
