@@ -1,6 +1,6 @@
 # C++智能指针
 
-## 1.为什么要存在只能指针
+## 1.为什么要存在智能指针
 
 > 因为一系列的原因我们在C++中引入了异常的概念，那么在异常的处理过程中，程序的执行会不断的乱跳，那么有时候就会造成已经申请的内存而没有进行释放的情况。所以我们需要适配这样的使用场景当我们的程序跳出当前的代码块时，对应内部的申请的内存空间可以自行释放。这就是智能指针所要实现的需求。
 
@@ -123,19 +123,19 @@
 > 				delete _ptr;
 > 			}
 > 		}
-> 	
+> 			
 > 		// 管理权转移
 > 		auto_ptr(auto_ptr<T>& ap)
 > 			:_ptr(ap._ptr)
 > 		{
 > 			ap._ptr = nullptr;
 > 		}
-> 	
+> 			
 > 		T& operator*()
 > 		{
 > 			return *_ptr;
 > 		}
-> 	
+> 			
 > 		T* operator->()
 > 		{
 > 			return _ptr;
@@ -165,7 +165,7 @@
 
 ③引用计数--shared_ptr
 
-> 采用引用计数的方式来实现多个智能针织指向同一个对象的情况(多线程)，另外利用了加锁的方式来实现多线程安全的问题。
+> 采用引用计数的方式来实现多个智能指针指向同一个对象的情况(多线程)，另外利用了加锁的方式来实现多线程安全的问题。
 >
 > ```c++
 > template<class T>
@@ -446,5 +446,5 @@
 >
 > 运行结果：
 >
-> ![image-20240208131625311](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240208131625311.png)
+> ![image-20240301204319786](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240301204319786.png)
 
