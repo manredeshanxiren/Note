@@ -72,7 +72,7 @@
 志输出语句与程序的业务逻辑语句将在同⼀个线程运⾏。每次调⽤⼀次打印⽇志API就对应⼀次系统调
 ⽤write写⽇志⽂件。
 
-![image-20240229150136540](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240229150136540.png)
+![image-20240304093855106](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240304093855106.png)
 
 在⾼并发场景下，随着⽇志数量不断增加，同步⽇志系统容易产⽣系统瓶颈：
 
@@ -83,7 +83,7 @@
 
 异步⽇志是指在进⾏⽇志输出时，⽇志输出语句与业务逻辑语句并不是在同⼀个线程中运⾏，⽽是**有专⻔的线程⽤于进⾏⽇志输出操作**。业务线程只需要将⽇志放到⼀个内存缓冲区中不⽤等待即可继续执⾏后续业务逻辑（作为⽇志的⽣产者），⽽⽇志的落地操作交给单独的⽇志线程去完成（作为⽇志的消费者）,这是⼀个**典型的⽣产-消费模型**。
 
-  ![image-20240229151158018](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240229151158018.png)
+![image-20240304093326776](C:/Users/jason/AppData/Roaming/Typora/typora-user-images/image-20240304093326776.png)
 
 这样做的好处是即使⽇志没有真的地完成输出也不会影响程序的主业务，可以提⾼程序的性能：
 

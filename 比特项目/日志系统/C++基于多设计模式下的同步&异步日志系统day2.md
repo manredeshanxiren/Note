@@ -64,7 +64,7 @@
 
 ### 1.2模块关系图
 
-![image-20240301151659398](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240301151659398.png)
+![bitlog模块关系图](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/bitlog%E6%A8%A1%E5%9D%97%E5%85%B3%E7%B3%BB%E5%9B%BE.png)
 
 ##  2.代码设计
 
