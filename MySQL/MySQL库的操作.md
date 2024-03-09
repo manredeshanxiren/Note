@@ -29,7 +29,7 @@ create_specification:
   create database db1;
   ```
 
-  ![image-20240308111032862](assets/image-20240308111032862.png)
+  ![image-20240308170624253](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240308170624253.png)
 
   说明：当我们创建数据库没有指定字符集和校验规则时，系统使用默认字符集：utf8，校验规则是：utf8_ general_ ci  
 
@@ -59,7 +59,7 @@ show variables like 'character_set_database';
 show variables like 'collation_database';
 ```
 
-![image-20240308125036299](assets/image-20240308125036299.png)	
+![image-20240308125036299](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240308125036299.png)	
 
 ### 2.2查看数据库支持的字符集
 
@@ -67,7 +67,7 @@ show variables like 'collation_database';
 show charset;
 ```
 
-![image-20240308125104768](assets/image-20240308125104768.png)
+![image-20240308125104768](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240308125104768.png)
 
 ### 2.3查看数据库支持的字符集校验规则
 
@@ -75,7 +75,7 @@ show charset;
 show collation;
 ```
 
-![image-20240308125226877](assets/image-20240308125226877.png)
+![image-20240308125226877](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240308125226877.png)
 
 ### 2.4校验规则对数据库的影响
 
