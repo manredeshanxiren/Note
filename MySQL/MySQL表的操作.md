@@ -42,13 +42,13 @@ birthday date comment '生日'
 
   -users.MYI:表索引
 
-![image-20240309112710874](assets/image-20240309112710874.png)
+![image-20240309112710874](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309112710874.png)
 
 创建一个innodb的数据库，观察一下存储目录：
 
 发现后缀是idb，并且好像表数据和表索引在同一个文件。
 
-![image-20240309113142140](assets/image-20240309113142140.png)
+![image-20240309113142140](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309113142140.png)
 
 ## 2.查看表结构
 
@@ -60,7 +60,7 @@ desc 表名;
 
 示例：
 
-![image-20240309113813433](assets/image-20240309113813433.png)
+![image-20240309113813433](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309113813433.png)
 
 ### 2.2查看表创建时的语句
 
@@ -72,7 +72,7 @@ show create table 表名;
 
 其中末尾的`\G`目的是让MySQL去掉一些不必要的显示，并且格式化我们的语句。
 
-![image-20240309114008862](assets/image-20240309114008862.png)
+![image-20240309114008862](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309114008862.png)
 
 ## 3.修改表
 
@@ -96,7 +96,7 @@ ALTER TABLE tablename DROP (column);
 
   结果：
 
-  ![image-20240309121829700](assets/image-20240309121829700.png)
+  ![image-20240309121829700](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309121829700.png)
 
 - 在users表添加一个字段，用于保存图片路径  
 
@@ -106,7 +106,7 @@ ALTER TABLE tablename DROP (column);
 
   结果：
 
-  ![image-20240309121920235](assets/image-20240309121920235.png)
+  ![image-20240309121920235](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309121920235.png)
 
 - 修改name，将其长度改成60  
 
@@ -116,13 +116,13 @@ ALTER TABLE tablename DROP (column);
 
   结果：
 
-  ![image-20240309122158564](assets/image-20240309122158564.png)
+  ![image-20240309122158564](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309122158564.png)
 
 - 删除password列
 
   > 注意：删除字段一定要小心，删除字段及其对应的列数据都没了  
 
-![image-20240309122336386](assets/image-20240309122336386.png)
+![image-20240309122336386](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309122336386.png)
 
 - 修改表名位employee
 
@@ -134,7 +134,7 @@ ALTER TABLE tablename DROP (column);
 
   结果：
 
-  ![image-20240309122511598](assets/image-20240309122511598.png)
+  ![image-20240309122511598](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309122511598.png)
 
 - 将name列修改为xingming  
 
@@ -144,7 +144,7 @@ ALTER TABLE tablename DROP (column);
 
   结果：
 
-  ![image-20240309122711686](assets/image-20240309122711686.png)
+  ![image-20240309122711686](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309122711686.png)
 
 - 删除表
 
@@ -162,4 +162,4 @@ ALTER TABLE tablename DROP (column);
 
   结果：
 
-  ![image-20240309123321776](assets/image-20240309123321776.png)
+  ![image-20240309123321776](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240309123321776.png)
