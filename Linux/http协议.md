@@ -400,3 +400,9 @@ int main(int argc, char* argv[])
 }
 ```
 
+## 4.请求方法
+
+- GET和POST：
+
+## 5.HTTP状态码
+
