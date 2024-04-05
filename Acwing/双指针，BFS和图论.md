@@ -192,3 +192,138 @@ int main()
 }
 ```
 
+## 4.完全二叉树的权值
+
+> 链接：[1240. 完全二叉树的权值 - AcWing题库](https://www.acwing.com/file_system/file/content/whole/index/content/4184175/)
+>
+> 思路：不难，直接看代码即可
+
+```cpp
+#include<iostream>
+
+const int N = 100010;
+
+typedef long long LL;
+
+using namespace std;
+
+LL maxs = -1e18; //层和最大值
+int res = -1;  //表示最小的层和
+
+int n; 
+int v[N];
+
+int main()
+{
+    
+    cin >> n;
+    
+    for(int i = 1; i <= n; ++i)
+        scanf("%d", &v[i]);
+        
+    for(int d = 1, i = 1; i <= n; i *= 2, d++)
+    {
+        LL s = 0;
+        for(int j = i; j <= n && j < i + (1 << d - 1); ++j)
+            s += v[j];
+
+        if(s > maxs)
+        {
+            maxs = s;
+            res = d;
+        }
+    }
+    cout << res;
+    return 0;
+}
+```
+
+## 5.地牢大师
+
+> 链接：[1096. 地牢大师 - AcWing题库](https://www.acwing.com/file_system/file/content/whole/index/content/4184041/)
+>
+> 思路：广度优先遍历
+
+```cpp
+#include<iostream>
+#include<cstdio>
+#include<cstring>
+
+using namespace std;
+
+const int N = 110;
+
+int L, R, C;
+
+struct Point
+{
+    int x, y, z;
+};
+
+char g[N][N][N];
+Point q[N * N * N];
+int dist[N][N][N];
+
+int dx[6] = {-1, 0, 0, 1, 0, 0};
+int dy[6] = {0, -1, 1, 0, 0, 0};
+int dz[6] = {0, 0, 0, 0, 1, -1};
+
+int bfs(Point start, Point end)
+{
+    int hh = 0, tt = 0;
+    q[0] = start;
+    memset(dist, -1, sizeof dist);
+    dist[start.x][start.y][start.z] = 0;
+    
+    while(hh <= tt)
+    {
+        auto t = q[hh++];
+        for(int i = 0; i < 6; ++i)
+        {
+            int x = t.x + dx[i], y = t.y + dy[i], z = t.z + dz[i];
+            //越界
+            if(x < 0 || x >= L || y < 0 || y >= R || z < 0 || z >= C) continue;
+            //有障碍物
+            if(g[x][y][z] == '#') continue;
+            //之前走过
+            if(dist[x][y][z] != -1) continue;
+        
+            //计算
+            dist[x][y][z] = dist[t.x][t.y][t.z] + 1;
+            
+            //到达终点
+            if(x == end.x && y == end.y && z == end.z) return dist[x][y][z];
+            
+            q[++tt] = {x, y, z};
+        }
+    }
+    return -1;
+}
+
+int main()
+{
+    while(scanf("%d%d%d", &L, &R, &C), L || R || C)
+    {
+        Point start, end;
+        for(int i = 0; i < L; ++i)
+            for(int j = 0; j < R; ++j)
+            {
+                scanf("%s", g[i][j]);
+                for(int z = 0; z < C; ++z)
+                {
+                    char c = g[i][j][z];
+                    if(c == 'S') start = {i, j, z};
+                    else if(c == 'E') end = {i, j, z};
+                }
+            }
+        
+        int distance = bfs(start, end);
+        if(distance == -1) cout << "Trapped!" << endl;
+        else cout << "Escaped in " << distance << " minute(s)." << endl;
+    }
+    
+    return 0;
+}
+
+```
+
