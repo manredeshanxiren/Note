@@ -116,3 +116,100 @@ namespace httplib
 >
 >   ​	③当处理函数调用完毕根据函数返回的Response结构体中的数据组织http响应发送给客户端
 
+## 2.httplib实现server和client
+
+### 2.1httplib实现server端
+
+```cpp
+#include"httplib.h"
+
+using namespace std;
+using namespace httplib;
+
+// 处理 "/hi" 路径的 GET 请求，返回 "hello_world!"
+void Hello(const Request& req, Response& rsp)
+{
+    rsp.set_content("hello_world!", "text/plain");
+    rsp.status = 200;
+}
+
+// 处理 "/numbers/{num}" 路径的 GET 请求，返回匹配到的数字
+void Numbers(const Request& req, Response& rsp)
+{
+    auto num = req.matches[1]; // 0 保存的是整体的 path，往后的下标中保存的是数据
+    rsp.set_content(num, "text/plain");
+    rsp.status = 200;
+}
+
+// 处理 "/multipart" 路径的 POST 请求，返回上传的文件名和内容
+void Multipart(const Request& req, Response& rsp)
+{
+    auto ret = req.has_file("file");
+    if (ret == false)
+    {
+        cout << "not file upload" << endl;
+        rsp.status = 400;
+        return;
+    }
+
+    const auto& file = req.get_file_value("file");
+    rsp.body.clear();
+    rsp.body = file.filename; // 文件名称
+    rsp.body += "\n";
+    rsp.body += file.content; // 文件内容
+    rsp.set_header("Content-Type", "text/plain");
+    rsp.status = 200;
+    return;
+}
+
+int main()
+{
+    Server server; // 实例化一个 server 对象用于搭建服务器
+
+    server.Get("/hi", Hello); // 注册一个针对 "/hi" 的 GET 请求的处理函数映射关系
+    server.Get(R"(/numbers/(\d+))", Numbers); 
+    server.Post("/multipart", Multipart);
+    server.listen("0.0.0.0", 9090);
+    return 0;
+}
+
+```
+
+### 2.2httplib实现client端
+
+```cpp
+#include"httplib.h"  // 引入 httplib 库的头文件
+
+using namespace std;  // 使用标准命名空间
+
+#define SERVER_IP "117.72.37.100"  // 定义服务器 IP 地址常量
+#define SERVER_PORT 9090  // 定义服务器端口号常量
+
+int main()
+{
+    // 实例化一个 httplib 客户端对象，并指定服务器的 IP 地址和端口号
+    httplib::Client client(SERVER_IP, SERVER_PORT);
+
+    // 创建一个多部分表单数据项
+    httplib::MultipartFormData item;
+    item.name = "file";  // 表单项的名称
+    item.filename = "hello.text";  // 文件名
+    item.content = "hello world";  // 文件内容
+    item.content_type = "text/plain";  // 文件内容类型
+
+    // 创建一个多部分表单数据项列表，并将上面创建的表单项添加到列表中
+    httplib::MultipartFormDataItems items;
+    items.push_back(item);
+
+    // 向服务器发送 POST 请求，提交多部分表单数据
+    auto res = client.Post("/multipart", items);
+
+    // 输出服务器响应的状态码和响应体
+    cout << res->status << endl;  // 打印响应状态码
+    cout << res->body << endl;    // 打印响应体内容
+    
+    return 0;
+}
+
+```
+
