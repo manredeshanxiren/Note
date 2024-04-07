@@ -111,7 +111,7 @@ Query OK, 2 rows affected (0.00 sec)
 -- 2 row affected: 表中有冲突数据，删除后重新插入
 ```
 
-### 1.2Rerieve
+### 1.2Retrieve
 
 语法：
 
@@ -1340,3 +1340,5 @@ select avg(sal) as myavg from EMP group by deptno having myavg<2000;
 > 8. **LIMIT/OFFSET**：LIMIT 和 OFFSET 子句用来限制返回的行数，并可以指定从结果集中的哪一行开始返回。这两个子句通常在最后执行。
 >
 > 总的来说，查询语句的执行顺序是从上到下，依次执行各个子句。每个子句的执行结果都会作为下一个子句的输入。
+
+<u>**SQL查询中各个关键字的执行先后顺序 from > on> join > where > group by > with > having > select  \> distinct > order by > limit ；**</u>
