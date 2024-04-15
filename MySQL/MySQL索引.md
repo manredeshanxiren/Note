@@ -319,3 +319,240 @@ MySQL 中每一页的大小只有 16KB ，单个Page大小固定，所以随着�
 > 所以通过辅助（普通）索引，找到目标记录，需要两遍索引：首先检索辅助索引获得主键，然后用主键到主索引中检索获得记录。这种过程，就叫做回表查询。
 > 为何 InnoDB 针对这种辅助（普通）索引的场景，不给叶子节点也附上数据呢？原因就是太浪费空间了。
 
+## 5.索引操作
+
+### 5.1创建主键索引
+
+- 第一种方式
+
+  ```mysql
+  -- 在创建表的时候，直接在字段名后指定 primary key
+  create table user1(id int primary key, name varchar(30));
+  ```
+
+- 第二种方式
+
+  ```mysql
+  -- 在创建表的最后，指定某列或某几列为主键索引
+  create table user2(id int, name varchar(30), primary key(id));
+  ```
+
+- 第三种方式
+
+  ```mysql
+  create table user3(id int, name varchar(30));
+  -- 创建表以后再添加主键
+  alter table user3 add primary key(id);
+  ```
+
+主键索引的特点：
+
+- 一个表中，最多有一个主键索引，当然可以使符合主键
+- 主键索引的效率高（主键不可重复）
+- 创建主键索引的列，它的值不能为null，且不能重复
+- 主键索引的列基本上是int 
+
+### 5.2唯一索引的创建
+
+- 第一种方式
+
+  ```mysql
+  -- 在表定义时，在某列后直接指定unique唯一属性。
+  create table user4(id int primary key, name varchar(30) unique);
+  ```
+
+- 第二种方式
+
+  ```mysql
+  -- 创建表时，在表的后面指定某列或某几列为unique
+  create table user5(id int primary key, name varchar(30), unique(name));
+  ```
+
+- 第三种方式
+
+  ```mysql
+  create table user6(id int primary key, name varchar(30)）；
+  alter table user6 add unique(name);
+  ```
+
+  **唯一键索引的特点：**
+
+  - 一个表中可以有多个唯一索引
+  - 查询效率高
+  - 如果在某一列建立唯一索引，必须保证这列不能有重复数据  
+  - **如果一个唯一索引上指定not null，等价于主键索引**
+
+### 5.3普通索引的创建
+
+- 第一种方式
+
+  ```mysql
+  create table user8(id int primary key,
+  name varchar(20),
+  email varchar(30),
+  index(name) --在表的定义最后，指定某列为索引
+  );
+  ```
+
+- 第二种方式
+
+  ```mysql
+  create table user9(id int primary key, name varchar(20), email
+  varchar(30));
+  alter table user9 add index(name); --创建完表以后指定某列为普通索引
+  ```
+
+- 第三种方式
+
+  ```mysql
+  create table user10(id int primary key, name varchar(20), email
+  varchar(30));
+  -- 创建一个索引名为 idx_name 的索引
+  create index idx_name on user10(name);
+  ```
+
+普通索引的特点：
+
+- 一个表中可以有多个普通索引，普通索引在实际开发中用的比较多  
+- 如果某列需要创建索引，但是该列有重复的值，那么我们就应该使用普通索引  
+
+### 5.4全文索引
+
+当对文章字段或有大量文字的字段进行检索时，会使用到全文索引。MySQL提供全文索引机制，但是有要求，**要求表的存储引擎必须是MyISAM**，**而且默认的全文索引支持英文，不支持中文**。如果对中文进行全文检索，可以使用sphinx的中文版(coreseek) .
+
+```mysql
+CREATE TABLE articles (
+id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,
+title VARCHAR(200),
+body TEXT,
+FULLTEXT (title,body)
+)engine=MyISAM;
+```
+
+```mysql
+INSERT INTO articles (title,body) VALUES
+('MySQL Tutorial','DBMS stands for DataBase ...'),
+('How To Use MySQL Well','After you went through a ...'),
+('Optimizing MySQL','In this tutorial we will show ...'),
+('1001 MySQL Tricks','1. Never run mysqld as root. 2. ...'),
+('MySQL vs. YourSQL','In the following database comparison ...'),
+('MySQL Security','When configured properly, MySQL ...');
+```
+
+- 查询有没有database数据
+
+如果使用如下查询方式，虽然查询出数据，但是没有使用到全文索引  
+
+```mysql
+mysql> select * from articles where body like '%database%';
++----+-------------------+------------------------------------------+
+| id | title             | body                                     |
++----+-------------------+------------------------------------------+
+|  1 | MySQL Tutorial    | DBMS stands for DataBase ...             |
+|  5 | MySQL vs. YourSQL | In the following database comparison ... |
++----+-------------------+------------------------------------------+
+2 rows in set (0.00 sec)
+```
+
+可以用explain工具看一下，是否使用到索引  
+
+```mysql
+mysql> explain select * from articles where body like '%database%'\G;
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: articles
+   partitions: NULL
+         type: ALL
+possible_keys: NULL
+          key: NULL    -- <=== Key为NULL表示没有使用索引
+      key_len: NULL
+          ref: NULL
+         rows: 6
+     filtered: 16.67
+        Extra: Using where
+1 row in set, 1 warning (0.00 sec)
+```
+
+- 如何使用全文索引呢？  
+
+```mysql
+mysql> select * from articles where match(title, body) against ('database');
++----+-------------------+------------------------------------------+
+| id | title             | body                                     |
++----+-------------------+------------------------------------------+
+|  5 | MySQL vs. YourSQL | In the following database comparison ... |
+|  1 | MySQL Tutorial    | DBMS stands for DataBase ...             |
++----+-------------------+------------------------------------------+
+```
+
+通过explain来分析这个sql语句  
+
+```mysql
+mysql> explain select * from articles where match(title, body) against ('database')\G;
+*************************** 1. row ***************************
+           id: 1
+  select_type: SIMPLE
+        table: articles
+   partitions: NULL
+         type: fulltext   -- << 采用了全文索引
+possible_keys: title
+          key: title
+      key_len: 0
+          ref: const
+         rows: 1
+     filtered: 100.00
+        Extra: Using where
+1 row in set, 1 warning (0.00 sec)
+```
+
+
+
+### 5.5查看索引
+
+- 第一种方法： show keys from 表名  
+
+  ```mysql
+  mysql> show keys from goods\G
+  *********** 1. row ***********
+  Table: goods <= 表名
+  Non_unique: 0 <= 0表示唯一索引
+  Key_name: PRIMARY <= 主键索引
+  Seq_in_index: 1
+  Column_name: goods_id <= 索引在哪列
+  Collation: A
+  Cardinality: 0
+  Sub_part: NULL
+  Packed: NULL
+  Null:
+  Index_type: BTREE <= 以二叉树形式的索引
+  Comment:
+  1 row in set (0.00 sec)
+  ```
+
+- 第二种方法: `show index from 表名;  `
+
+- 第三种方法（信息比较简略）： `desc 表名；` 
+
+### 5.6删除索引
+
+- 第一种方法-删除主键索引： `alter table` 表名 `drop primary key;`  
+- 第二种方法-其他索引的删除： `alter table 表名 drop index 索引名；` 索引名就是show keys
+  from 表名中的 Key_name 字段  
+- 第三种方法方法： `drop index 索引名 on 表名;` 
+
+**索引创建原则**  
+
+- 比较频繁作为查询条件的字段应该创建索引  
+- 唯一性太差的字段不适合单独创建索引，即使频繁作为查询条件  
+- 更新非常频繁的字段不适合作创建索引  
+- 不会出现在where子句中的字段不该创建索引  
+
+## 其他概念
+
+复合索引
+索引最左匹配原则
+索引覆盖  
+
+
+
