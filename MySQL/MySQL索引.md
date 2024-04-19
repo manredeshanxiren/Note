@@ -143,7 +143,7 @@ mysql> select * from user;   -- 我们发现结果竟然是排好序的
 
 `MySQL` 中要管理很多数据表文件，而要管理好这些文件，就需要 **先描述，在组织** ,我们目前可以简单理解成一个个独立文件是有一个或者多个Page构成的 .
 
-<img src="https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240414164005157.png" alt="image-20240414164005157" style="zoom:67%;" />
+<img src="https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240414164005157.png" alt="image-20240414164005157"  />
 
 不同的 Page ，在 MySQL 中，都是 16KB ，使用` prev `和 `next` 构成双向链表  
 
@@ -163,7 +163,7 @@ mysql> select * from user;   -- 我们发现结果竟然是排好序的
 > - 通过上面的分析，我们知道，上面页模式中，只有一个功能，就是在查询某条数据的时候直接将一整页的数据加载到内存中，以减少硬盘IO次数，从而提高性能。但是，我们也可以看到，现在的页模式内部，实际上是采用了链表的结构，前一条数据指向后一条数据，本质上还是通过数据的逐条比较来取出特定的数据。
 > - 如果有1千万条数据，一定需要多个Page来保存1千万条数据，多个Page彼此使用双链表链接起来，而且每个Page内部的数据也是基于链表的。那么，查找特定一条记录，也一定是线性查找。这效率也太低了。
 
-![image-20240414164628955](assets/image-20240414164628955.png)
+![image-20240414164628955](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240414164628955.png)
 
 **页目录**
 
@@ -313,7 +313,7 @@ MySQL 中每一页的大小只有 16KB ，单个Page大小固定，所以随着�
 同样， InnoDB 除了主键索引，用户也会建立辅助（普通）索引，我们以上表中的 Col3 建立对应的辅助
 索引如下图：  
 
-> ![image-20240414174743049](assets/image-20240414174743049.png)
+> ![image-20240414174743049](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240414174743049.png)
 >
 > 可以看到， InnoDB 的非主键索引中叶子节点并没有数据，而只有对应记录的key值。
 > 所以通过辅助（普通）索引，找到目标记录，需要两遍索引：首先检索辅助索引获得主键，然后用主键到主索引中检索获得记录。这种过程，就叫做回表查询。

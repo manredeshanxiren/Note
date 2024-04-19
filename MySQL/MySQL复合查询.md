@@ -60,7 +60,7 @@
 
 - 显示雇员名、雇员工资以及所在部门的名字因为上面的数据来自EMP和DEPT表，因此要联合查询  
 
-![image-20240409145655443](assets/image-20240409145655443.png)
+![image-20240409145655443](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240409145655443.png)
 
 其实我们只要emp表中的deptno = dept表中的deptno字段的记录  
 
