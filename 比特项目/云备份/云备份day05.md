@@ -314,7 +314,11 @@ typedef struct BackupInfo_t
     time_t mtime;            // 最后一次修改时间
     std::string real_path;   // 文件实际存储路径名称
     std::string pack_path;   // 压缩包存储路径名称
+<<<<<<< HEAD
     std::string url;    // URL路径
+=======
+    std::string url_path;    // URL路径
+>>>>>>> 88cf706b46ca916ba52c492de16f7fa03814e361
 } BackupInfo;
 
 // 数据管理类: 管理服务端系统中会用到的数据
@@ -334,9 +338,12 @@ public:
     // 初始化加载，在每次系统重启都要加载以前的数据
     bool InitLoad();
     
+<<<<<<< HEAD
     //将数据持久化到文件
     bool Storage();
     
+=======
+>>>>>>> 88cf706b46ca916ba52c492de16f7fa03814e361
     // 新增备份信息
     bool Insert(const BackupInfo &info);
     
@@ -358,6 +365,7 @@ void NewBackupInfo(const std::string realpath, BackupInfo *info);
 
 ```
 
+<<<<<<< HEAD
 实现：
 
 ```cpp
@@ -1384,4 +1392,3 @@ namespace cloud
 
 
 ```
-

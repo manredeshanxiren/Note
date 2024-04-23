@@ -3,6 +3,8 @@
 如果我们只能使用root用户，这样存在安全隐患。这时，就需要使用MySQL的用户管理  
 
 ![image-20240418114620029](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240418114620029.png)
+=======
+![image-20240418114620029](assets/image-20240418114620029.png)
 
 张三只能操纵mytest这个库，李四只能操作msg这个库。如果给他们root账户，他们就可以操控所有的库，风险太大。
 
