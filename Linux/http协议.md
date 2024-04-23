@@ -162,18 +162,15 @@ Accept-Language: zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6
 #include<pthread.h>
 #include<functional>
 
-#include"err.hpp"
-#include"log.hpp"
-#include"Sock.hpp"
+#include"err.hpp" // 错误处理相关的头文件
+#include"log.hpp" // 日志相关的头文件
+#include"Sock.hpp" // Socket 相关的头文件
 
-
-static const uint16_t defaultport = 8888;
-
+static const uint16_t defaultport = 8888; // 默认端口号
 
 using namespace std;
 
-
-using func_t = function<string(string&)>;
+using func_t = function<string(string&)>; // 定义函数类型，接受一个字符串参数并返回一个字符串
 
 class HttpServer;
 
@@ -189,10 +186,10 @@ public:
     }
 
 public:
-    int _sock;
-    string _ip;
-    uint16_t _port;
-    HttpServer *_tsvrp;
+    int _sock; // 客户端套接字
+    string _ip; // 客户端 IP 地址
+    uint16_t _port; // 客户端端口号
+    HttpServer *_tsvrp; // 指向 HTTP 服务器对象的指针
 };
 
 class HttpServer
@@ -203,40 +200,40 @@ public:
 
     void InitServer()
     {
-        ListenSock_.Socket();
-        ListenSock_.Bind(port_);
-        ListenSock_.Listen();
+        ListenSock_.Socket(); // 创建监听套接字
+        ListenSock_.Bind(port_); // 绑定监听套接字到指定端口
+        ListenSock_.Listen(); // 开始监听端口
     }
 
     void HanderHttpRequest(int sock)
     {
         char buffer[1024];
         string request;
-        int s = recv(sock, buffer, sizeof(buffer), 0);
+        int s = recv(sock, buffer, sizeof(buffer), 0); // 接收客户端请求
         if (s > 0)
         {
             buffer[s] = 0;
             request = buffer;
-            string response = func_(request);
-            send(sock, response.c_str(), response.size(), 0);
+            string response = func_(request); // 处理客户端请求并生成响应
+            send(sock, response.c_str(), response.size(), 0); // 发送响应给客户端
         }
         else if (s < 0)
         {
-            LogMessage(Info, "Client quit...");
+            LogMessage(Info, "Client quit..."); // 如果接收失败，记录日志
         }
 
     }
 
     static void* ThreadRoutine(void* args)
     {
-        pthread_detach(pthread_self());
+        pthread_detach(pthread_self()); // 分离线程
 
-        ThreadData* td = static_cast<ThreadData*>(args);
+        ThreadData* td = static_cast<ThreadData*>(args); // 将参数转换为 ThreadData 对象指针
 
-        td->_tsvrp->HanderHttpRequest(td->_sock);
-        close(td->_sock);
+        td->_tsvrp->HanderHttpRequest(td->_sock); // 调用 HTTP 服务器对象的处理请求方法
+        close(td->_sock); // 关闭客户端套接字
 
-        delete td;
+        delete td; // 释放线程数据对象内存
 
         return nullptr;
     }
@@ -247,13 +244,13 @@ public:
         {
             string clientip;
             uint16_t clientport;
-            int sock = ListenSock_.Accept(&clientip, &clientport);
+            int sock = ListenSock_.Accept(&clientip, &clientport); // 接受客户端连接
             if (sock < 0)
                 continue;
                 
             pthread_t tid;
-            ThreadData* td = new ThreadData(sock, clientip, clientport, this);
-            pthread_create(&tid, nullptr, &ThreadRoutine, td);
+            ThreadData* td = new ThreadData(sock, clientip, clientport, this); // 创建线程数据对象
+            pthread_create(&tid, nullptr, &ThreadRoutine, td); // 创建线程处理客户端请求
         }
 
     }
@@ -262,10 +259,11 @@ public:
     {}
 
 private:
-    uint16_t port_;
-    Sock ListenSock_;
-    func_t func_;
+    uint16_t port_; // 服务器端口号
+    Sock ListenSock_; // 监听套接字对象
+    func_t func_; // 处理请求的函数对象
 };
+
 ```
 
 #### 3.2.2主函数
