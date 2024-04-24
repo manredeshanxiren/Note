@@ -704,15 +704,15 @@ namespace cloud
 > ​	1.文件上传请求:备份客户端上传的文件响应上传成功
 > ​	2.文件列表请求:客户端浏览器请求一个备份文件的展示页面，响应页面载，响应客户端要下载的文件数据                   	3.文件下载请求:通过展示页面，点击下载， 响应客户端要下载的文件数据
 
-![image-20240421214318587](assets/image-20240421214318587.png)
+![image-20240421214318587](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240421214318587.png)
 
 代码框架设计：
 
-![image-20240421214930641](assets/image-20240421214930641.png)
+![image-20240421214930641](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240421214930641.png)
 
 Etag字段：
 
-![image-20240422113709461](assets/image-20240422113709461.png)
+![image-20240422113709461](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240422113709461.png)
 
 ### 5.2服务端业务处理模块的实现
 
@@ -878,7 +878,7 @@ namespace cloud
 
 实现：
 
-![image-20240422121659575](assets/image-20240422121659575.png)
+![image-20240422121659575](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240422121659575.png)
 
 实现：
 
@@ -953,7 +953,7 @@ static void Download(const httplib::Request &req, httplib::Response &rsp)
 
 ### 6.1客户端功能和模块化设计
 
-![image-20240422170815794](assets/image-20240422170815794.png)
+![image-20240422170815794](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240422170815794.png)
 
 ### 6.2移植一部分代码到windows下的vs
 
@@ -1263,7 +1263,7 @@ namespace cloud
 
 ### 6.4文件备份类的设计
 
-![image-20240422205547856](assets/image-20240422205547856.png)
+![image-20240422205547856](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20240422205547856.png)
 
 实现：
 
