@@ -2,6 +2,7 @@
 #define WIDGET_H
 
 #include <QWidget>
+#include <QPushButton>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
@@ -15,7 +16,10 @@ public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
 
+    void handleClick();
+
 private:
     Ui::Widget *ui;
+    QPushButton* button;
 };
 #endif // WIDGET_H
