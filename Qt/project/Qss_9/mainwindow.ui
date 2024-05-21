@@ -1,0 +1,132 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>MainWindow</class>
+ <widget class="QMainWindow" name="MainWindow">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>800</width>
+    <height>600</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>MainWindow</string>
+  </property>
+  <property name="styleSheet">
+   <string notr="true">QMenuBar
+{
+    background-color : rgb(230, 237, 255);
+
+    spacing : 5px;
+}
+
+QMenuBar::item
+{
+    border-radius : 6px;
+    padding : 3px 10px;
+    background-color : rgb(213, 230, 255);
+    margin-right: 5px;  
+}
+
+QMenuBar::item:selected
+{    
+    background-color : rgb(89, 161, 255);
+}
+
+QMenu::item:selected
+{    
+    border : 2px solid rgb(87, 160, 255);
+}
+
+QMenu::item
+{    
+    border : 2px solid transparent;
+	padding : 2px 7px;
+}
+
+QMenu::separator
+{
+	height : 2px;
+	background-color : rgb(19, 101, 255);
+	margin : 0px 5px;
+}	</string>
+  </property>
+  <widget class="QWidget" name="centralwidget"/>
+  <widget class="QMenuBar" name="menubar">
+   <property name="geometry">
+    <rect>
+     <x>0</x>
+     <y>0</y>
+     <width>800</width>
+     <height>24</height>
+    </rect>
+   </property>
+   <widget class="QMenu" name="menu111">
+    <property name="title">
+     <string>菜单1</string>
+    </property>
+    <widget class="QMenu" name="menu3333">
+     <property name="title">
+      <string>3333</string>
+     </property>
+     <addaction name="action555"/>
+    </widget>
+    <addaction name="action222"/>
+    <addaction name="separator"/>
+    <addaction name="menu3333"/>
+    <addaction name="action4444"/>
+    <addaction name="action65666"/>
+    <addaction name="separator"/>
+    <addaction name="action7777"/>
+    <addaction name="action9999"/>
+   </widget>
+   <widget class="QMenu" name="menu_2">
+    <property name="title">
+     <string>菜单2</string>
+    </property>
+   </widget>
+   <widget class="QMenu" name="menu_3">
+    <property name="title">
+     <string>菜单3</string>
+    </property>
+   </widget>
+   <addaction name="menu111"/>
+   <addaction name="menu_2"/>
+   <addaction name="menu_3"/>
+  </widget>
+  <widget class="QStatusBar" name="statusbar"/>
+  <action name="action222">
+   <property name="text">
+    <string>222</string>
+   </property>
+  </action>
+  <action name="action555">
+   <property name="text">
+    <string>555</string>
+   </property>
+  </action>
+  <action name="action4444">
+   <property name="text">
+    <string>4444</string>
+   </property>
+  </action>
+  <action name="action65666">
+   <property name="text">
+    <string>65666</string>
+   </property>
+  </action>
+  <action name="action7777">
+   <property name="text">
+    <string>7777</string>
+   </property>
+  </action>
+  <action name="action9999">
+   <property name="text">
+    <string>9999</string>
+   </property>
+  </action>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>
