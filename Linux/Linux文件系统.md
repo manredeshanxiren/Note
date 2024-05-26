@@ -26,7 +26,7 @@
 
 a.每一个被打开的文件，都要在OS内对应文件对象的struct结构体，可以将所有的struct file结构体用某种数据结构链接起来----，在OS内部，对被打开的文件进行管理，就被转换成了对链表的增删查改。
 
-结论：文件被打开，OS要为被打开的文件，创建对应的内核数据结构，
+结论：文件被打开，OS要为被打开的文件，创建对应的内核数据结构.
 
 ```c
 struct file
@@ -69,7 +69,32 @@ struct file
 写一个程序尝试向文件中写入字符串：
 
 ```c
+#include <stdio.h>
+#include <stdlib.h>
 
+int main() {
+    const char *filename = "log.txt"; // 文件名
+    const char *text = "Hello, xupt";    // 要写入的字符串
+
+    // 以写入模式打开文件
+    FILE *file = fopen(filename, "w");
+    if (file == NULL) {
+        perror("Error opening file"); // 如果文件打开失败，打印错误信息
+        return EXIT_FAILURE;
+    }
+
+    // 写入字符串到文件
+    if (fprintf(file, "%s\n", text) < 0) {
+        perror("Error writing to file"); // 如果写入失败，打印错误信息
+        fclose(file); // 关闭文件
+        return EXIT_FAILURE;
+    }
+
+    // 关闭文件
+    fclose(file);
+   
+    return 0;
+}
 ```
 
 运行结果：
@@ -426,36 +451,52 @@ int main()
 代码：
 
 ```c
-#include<string.h>    
-#include<stdlib.h>    
-#include<sys/types.h>    
-#include<sys/stat.h>    
-#include<unistd.h>    
-    
-#include<fcntl.h>    
-//系统方案    
-    
-#define LOG "log.txt"    
-    
-int main()    
-{    
-  int fd = open(LOG, O_WRONLY | O_CREAT, 0666);    
-    
-  printf("fd : %d errno : %d errnostring: %s\n", fd, errno, strerror(errno));    
-    
-    
-  //写入    
-  const char * msg = "hello xupt";    
-  int cnt = 5;    
-  while(cnt)    
-  {    
-    char line[128];    
-    snprintf(line, sizeof(line), "%s , %d \n", msg, cnt);    
-    
-    write(fd, line, strlen(line));    
-                                                                                                                                                               
-    cnt--;    
-  } 
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+
+#define LOG "log.txt"
+
+int main() {
+    int fd = open(LOG, O_WRONLY | O_CREAT, 0666);
+
+    if (fd == -1) {
+        printf("Error opening file: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    printf("fd : %d errno : %d errnostring: %s\n", fd, errno, strerror(errno));
+
+    // 写入
+    const char *msg = "hello xupt";
+    int cnt = 5;
+    while (cnt) {
+        char line[128];
+        snprintf(line, sizeof(line), "%s , %d \n", msg, cnt);
+
+        ssize_t bytes_written = write(fd, line, strlen(line));
+        if (bytes_written == -1) {
+            printf("Error writing to file: %s\n", strerror(errno));
+            close(fd); // 关闭文件描述符
+            return EXIT_FAILURE;
+        }
+
+        cnt--;
+    }
+
+    // 关闭文件描述符
+    if (close(fd) == -1) {
+        printf("Error closing file: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    printf("File closed successfully.\n");
+    return EXIT_SUCCESS;
+}
 ```
 
 运行结果：
@@ -477,34 +518,53 @@ int main()
 代码：
 
 ```c
-#include<sys/stat.h>    
-#include<unistd.h>    
-    
-#include<fcntl.h>    
-//系统方案    
-    
-#define LOG "log.txt"    
-    
-int main()    
-{    
-  //int fd = open(LOG, O_WRONLY | O_CREAT | O_TRUNC, 0666);    
-  int fd = open(LOG, O_RDONLY, 0666);    
-    
-  printf("fd : %d errno : %d errnostring: %s\n", fd, errno, strerror(errno));    
-    
-    
-//读取    
-    
-  char buf[1024];    
-    
-  ssize_t n = read(fd, buf, sizeof(buf) - 1); //使用操作系统进行IO的时候，要注意\0问题    
-  if(n > 0)    
-  {    
-    buf[n] = '\0';    
-    
-    printf("%s", buf);    
-  }    
-   return 0;
+#include <string.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <fcntl.h>
+#include <errno.h>
+
+
+#define LOG "log.txt"
+
+int main() {
+    int fd = open(LOG, O_WRONLY | O_CREAT, 0666);
+
+    if (fd == -1) {
+        printf("Error opening file: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    printf("fd : %d errno : %d errnostring: %s\n", fd, errno, strerror(errno));
+
+    // 写入
+    const char *msg = "hello xupt";
+    int cnt = 5;
+    while (cnt) {
+        char line[128];
+        snprintf(line, sizeof(line), "%s , %d \n", msg, cnt);
+
+        ssize_t bytes_written = write(fd, line, strlen(line));
+        if (bytes_written == -1) {
+            printf("Error writing to file: %s\n", strerror(errno));
+            close(fd); // 关闭文件描述符
+            return EXIT_FAILURE;
+        }
+
+        cnt--;
+    }
+
+    // 关闭文件描述符
+    if (close(fd) == -1) {
+        printf("Error closing file: %s\n", strerror(errno));
+        return EXIT_FAILURE;
+    }
+
+    printf("File closed successfully.\n");
+    return EXIT_SUCCESS;
 }
 ```
 

@@ -216,7 +216,7 @@
 > 			printf("我是父进程，我的pid是：%d，我的父进程是：%d"，getpid(),getppid());
 > 			sleep(2);   
 > 		}                          
-> 	}                                                                                            
+> 	}                                                                                    
 > 	return 0;                                                                                  
 > } 
 > ```

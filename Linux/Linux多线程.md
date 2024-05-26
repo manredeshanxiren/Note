@@ -74,7 +74,7 @@ int main()
 
 ①物理内存和磁盘之间
 
-- 内存管理的本质：将磁盘中的特定的4KB的块(数据内容)，放入到哪一个物理内存的4KB空间(数据保存的空间)。
+- 内存管理的本质：将磁盘中的特定的4KB的块(数据内容)，放入 到哪一个物理内存的4KB空间(数据保存的空间)。
 
 - 如果过多的IO，注定了过多的寻址，过多的机械运动，导致效率低下。所以OS在和磁盘这样的设备进行IO交互的时候，绝对不是按照字节单位，而是按照块单位
 
@@ -577,29 +577,29 @@ int main()
 >
 > - __thread参数：
 >
->    __thread是GCC内置的线程局部存储设施，存取效率可以和全局变量相比。__thread变量每一个线程有一份独立实体，各个线程的值互不干扰。**可以用来修饰那些带有全局性且值可能变，但是又不值得用全局变量保护的变量**。‘
+>    __thread是GCC内置的线程局部存储设施，存取效率可以和全局变量相比。__thread变量每一个线程有一份独立实体，各个线程的值互不干扰。**可以用来修饰那些带有全局性且值可能变，但是又不值得用全局变量保护的变量**。
 >
 >   ```cpp
 >   #include<iostream>
 >   #include<pthread.h>
 >   #include<unistd.h>
 >   #include<cstring>
->                   
+>                     
 >   using namespace std;
->                   
+>                     
 >   __thread int g_val = 100;
->                   
+>                     
 >   //int g_val = 100;
->                   
+>                     
 >   std::string hexAddr(pthread_t tid)
 >   {
 >       g_val++;
 >       char buffer[64];
 >       snprintf(buffer, sizeof(buffer), "0x%x", tid);
->                   
+>                     
 >       return buffer;
 >   }
->                   
+>                     
 >   void *threadRoutine(void* args)
 >   {
 >       // static int a = 10;
@@ -609,25 +609,25 @@ int main()
 >       {
 >           sleep(1);
 >           cout << name << " g_val: " << g_val++ << ", &g_val: " << &g_val << endl;
->                           
+>                             
 >       }
 >       return nullptr;
 >   }
->                   
+>                     
 >   int main()
 >   {
 >       pthread_t t1, t2, t3;
 >       pthread_create(&t1, nullptr, threadRoutine, (void*)"thread 1"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t2, nullptr, threadRoutine, (void*)"thread 2"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t3, nullptr, threadRoutine, (void*)"thread 3"); // 线程被创建的时候，谁先执行不确定!
->                   
+>                     
 >       pthread_join(t1, nullptr);
 >       pthread_join(t2, nullptr);
 >       pthread_join(t3, nullptr);
->                   
+>                     
 >       return 0;
 >   }
->                   
+>                     
 >   ```
 >
 >   运行结果：
@@ -1140,7 +1140,6 @@ void* active(void* args)
         pthread_cond_wait(&cond, &mutex);
         cout << "我是线程：" << name << endl;
         pthread_mutex_unlock(&mutex);
-
     }
 }
 

@@ -59,8 +59,7 @@ pid_t fork(void);
 
 ### 1.3写时拷贝
 
-通常，父子代码共享，父子再不写入时，数据也是共享的，当任意一方试图写入，便以写时拷贝的方式各自一份副
-本。具体见下图:
+通常，父子代码共享，父子再不写入时，数据也是共享的，当任意一方试图写入，便以写时拷贝的方式各自一份副本。具体见下图:
 
 ![image-20231108113305117](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231108113305117.png)
 
@@ -335,25 +334,27 @@ const char * errorstr[]
 > #include<stdlib.h>
 > int main()
 > {
->     pid_t id = fork();
+>  pid_t id = fork();
 > 
->     if(id == 0)
->     {
->       //子进程    
->       int cnt = 5;    
->       while(cnt)    
->       {    
->         printf("我是子进程，我还活着呢，我还有%dS，我的pid：%d，我的ppid：%d\n", cnt--, getpid(), getppid());    
->       	sleep(1);    
->       }    
->      exit(0);    
->     }    
->  
->     sleep(10);                                                                                                                            
->   pid_t ret_id = wait(NULL);    
+>  if(id == 0)
+>  {
+>    //子进程    
+>    int cnt = 5;    
+>    while(cnt)    
+>    {    
+>      printf("我是子进程，我还活着呢，我还有%dS，我的pid：%d，我的ppid：%d\n", cnt--, getpid(), getppid());    
+>    	sleep(1);    
+>    }    
+>   exit(0);    
+>  }    
+> 
+>  sleep(10);                                                                                                                            
+> pid_t ret_id = wait(NULL);    
 > printf("我是父进程，我等待成功了，我的pid：%d，我的ppid：%d\n, ret_id: %d\n",\    
->    getpid(), getppid(), ret_id);    
->     sleep(5);   
+> getpid(), getppid(), ret_id);    
+>  sleep(5);
+>     return 0;
+> }
 > ```
 >
 > 运行结果：
@@ -396,7 +397,7 @@ const char * errorstr[]
 >
 > - 否则，操作系统会根据该参数，将子进程的退出信息反馈给父进程  
 >
-> - tatus不能简单的当作整形来看待，可以当作位图来看待，具体细节如下图（只研究status低16比特
+> - status不能简单的当作整形来看待，可以当作位图来看待，具体细节如下图（只研究status低16比特
 >   位）：  
 >
 > - ![image-20231108173335756](https://gitee.com/slow-heating-shaanxi-people/pictrue/raw/master/pmm/image-20231108173335756.png)
@@ -415,7 +416,7 @@ const char * errorstr[]
 >   int main()
 >   {
 >       pid_t id = fork();
->   
+>     
 >       if(id == 0)    
 >       {    
 >         //子进程    
@@ -425,7 +426,7 @@ const char * errorstr[]
 >           printf("我是子进程，我还活着呢，我还有%dS，我的pid：%d，我的ppid：%d\n", cnt--, getpid(), getppid());    
 >         sleep(1);    
 >         }    
->         exit(1);                                                                                                            
+>         exit(1);                                                                                                           
 >       }   
 >   int status = 0;    
 >    pid_t ret_id = waitpid(id, &status, 0);    
