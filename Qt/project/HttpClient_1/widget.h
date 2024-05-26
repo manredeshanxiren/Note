@@ -2,6 +2,7 @@
 #define WIDGET_H
 
 #include <QWidget>
+#include <QNetworkAccessManager>
 
 QT_BEGIN_NAMESPACE
 namespace Ui { class Widget; }
@@ -15,7 +16,11 @@ public:
     Widget(QWidget *parent = nullptr);
     ~Widget();
 
+private slots:
+    void on_pushButton_clicked();
+
 private:
     Ui::Widget *ui;
+    QNetworkAccessManager* manager;
 };
 #endif // WIDGET_H
