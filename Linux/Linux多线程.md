@@ -584,22 +584,22 @@ int main()
 >   #include<pthread.h>
 >   #include<unistd.h>
 >   #include<cstring>
->                     
+>                       
 >   using namespace std;
->                     
+>                       
 >   __thread int g_val = 100;
->                     
+>                       
 >   //int g_val = 100;
->                     
+>                       
 >   std::string hexAddr(pthread_t tid)
 >   {
 >       g_val++;
 >       char buffer[64];
 >       snprintf(buffer, sizeof(buffer), "0x%x", tid);
->                     
+>                       
 >       return buffer;
 >   }
->                     
+>                       
 >   void *threadRoutine(void* args)
 >   {
 >       // static int a = 10;
@@ -609,25 +609,25 @@ int main()
 >       {
 >           sleep(1);
 >           cout << name << " g_val: " << g_val++ << ", &g_val: " << &g_val << endl;
->                             
+>                               
 >       }
 >       return nullptr;
 >   }
->                     
+>                       
 >   int main()
 >   {
 >       pthread_t t1, t2, t3;
 >       pthread_create(&t1, nullptr, threadRoutine, (void*)"thread 1"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t2, nullptr, threadRoutine, (void*)"thread 2"); // 线程被创建的时候，谁先执行不确定！
 >       pthread_create(&t3, nullptr, threadRoutine, (void*)"thread 3"); // 线程被创建的时候，谁先执行不确定!
->                     
+>                       
 >       pthread_join(t1, nullptr);
 >       pthread_join(t2, nullptr);
 >       pthread_join(t3, nullptr);
->                     
+>                       
 >       return 0;
 >   }
->                     
+>                       
 >   ```
 >
 >   运行结果：
@@ -2561,7 +2561,7 @@ pthread_mutex_t ThreadPool<T>::instance_lock = PTHREAD_MUTEX_INITIALIZER;
 ## 12.其他常见的各种锁  
 
 > - 悲观锁：在每次取数据时，总是担心数据会被其他线程修改，所以会在取数据前先加锁（读锁，写锁，行锁等），当其他线程想要访问数据时，被阻塞挂起.
-> -  乐观锁：每次取数据时候，总是乐观的认为数据不会被其他线程修改，因此不上锁。但是在更新数据前，会判断其他数据在更新前有没有对数据进行修改。主要采用两种方式：版本号机制和CAS操作.
+> -  乐观锁：每次取数据时候，总是乐观的认为数据不会被其他线程修改，因此不上锁。但是在更新数据前，会判断其他线程在更新前有没有对数据进行修改。主要采用两种方式：版本号机制和CAS操作.
 > -  CAS操作：当需要更新数据时，判断当前内存值和之前取得的值是否相等。如果相等则用新值更新。若不等则失败，失败则重试，一般是一个自旋的过程，即不断重试 .
 > - 自旋锁:**是指当一个线程在获取锁的时候，如果锁已经被其它线程获取，那么该线程将循环等待,其中是否等待取决于访问临界区要花费多长时间，然后不断的判断锁是否能够被成功获取，直到获取到锁才会退出循环。**
 
