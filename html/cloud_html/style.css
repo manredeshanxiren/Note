@@ -1,0 +1,26 @@
+body {
+    font-family: Arial, sans-serif;
+    margin: 20px;
+}
+
+h1 {
+    color: #333;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+#fileList table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+#fileList th, #fileList td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+#fileList th {
+    background-color: #f2f2f2;
+}

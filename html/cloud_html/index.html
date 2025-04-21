@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>File Upload and List</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #fff;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        h1 {
+            color: #0056b3;
+        }
+        .upload-form {
+            display: flex;
+            align-items: center;
+            margin-top: 20px;
+        }
+        .upload-form input[type="file"] {
+            margin-right: 10px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .upload-form button {
+            padding: 10px 20px;
+            border: none;
+            background-color: #007bff;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .upload-form button:hover {
+            background-color: #0056b3;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            padding: 15px;
+            border: 1px solid #ccc;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        td a {
+            color: #007bff;
+            text-decoration: none;
+            transition: color 0.3s ease;
+        }
+        td a:hover {
+            color: #0056b3;
+        }
+        .delete-button {
+            padding: 5px 10px;
+            border: none;
+            background-color: #dc3545;
+            color: #fff;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
+        }
+        .delete-button:hover {
+            background-color: #c82333;
+        }
+        .hot-icon {
+            width: 20px;
+            height: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>File Upload</h1>
+        <form class="upload-form">
+            <input type="file" id="fileInput">
+            <button type="button" onclick="uploadFile()">Upload</button>
+        </form>
+        <h1>File List</h1>
+        <div id="fileList"></div>
+    </div>
+
+    <script>
+        function uploadFile() {
+            const fileInput = document.getElementById('fileInput');
+            const file = fileInput.files[0];
+            if (!file) {
+                alert('Please select a file to upload.');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    alert('File uploaded successfully');
+                    loadFileList();
+                } else {
+                    alert('File upload failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('File upload failed');
+            });
+        }
+
+        function loadFileList() {
+            fetch('/listshow')
+                .then(response => response.json())  // Expect JSON data from server
+                .then(data => {
+                    const fileList = document.getElementById('fileList');
+                    let html = '<table><thead><tr><th>File Name</th><th>Hot Status</th><th>Actions</th></tr></thead><tbody>';
+                    data.files.forEach(file => {
+                        html += `<tr>
+                                    <td><a href="${file.url}">${file.name}</a></td>
+                                    <td><img src="${file.isHot ? 'hot.png' : 'not-hot.png'}" class="hot-icon" alt="${file.isHot ? 'Hot' : 'Not Hot'}"></td>
+                                    <td><button class="delete-button" onclick="deleteFile('${file.name}')">Delete</button></td>
+                                </tr>`;
+                    });
+                    html += '</tbody></table>';
+                    fileList.innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                });
+        }
+
+        function deleteFile(filename) {
+            fetch(`/delete?filename=${filename}`, {
+                method: 'DELETE'
+            })
+            .then(response => {
+                if (response.status === 202) {
+                    alert('File deletion failed is hot file');
+                } else if(response.status === 200) {
+                    alert('File deleted successfully');
+                    loadFileList();
+                } else {
+                    alert('File deletion failed');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('File deletion failed');
+            });
+        }
+
+        // Load file list on page load
+        window.onload = loadFileList;
+    </script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+D:/Note/Note/Qt/project/build-CloudBucket-Desktop_Qt_5_14_2_MinGW_64_bit-Release/CMakeFiles/CloudBucket.dir
+D:/Note/Note/Qt/project/build-CloudBucket-Desktop_Qt_5_14_2_MinGW_64_bit-Release/CMakeFiles/edit_cache.dir
+D:/Note/Note/Qt/project/build-CloudBucket-Desktop_Qt_5_14_2_MinGW_64_bit-Release/CMakeFiles/rebuild_cache.dir
+D:/Note/Note/Qt/project/build-CloudBucket-Desktop_Qt_5_14_2_MinGW_64_bit-Release/CMakeFiles/CloudBucket_autogen.dir
