@@ -767,3 +767,597 @@ int main() {
 }
 ```
 
+## 17.求组合数
+
+1.数据范围   $1 \leq n \leq 10000$，   $1 \leq b \leq a \leq 2000$ 
+
+```C++
+#include <iostream>
+
+using namespace std;
+
+const int N = 2010, mod = 1e9 + 7; 
+
+
+int c[N][N];
+
+void init() {
+    
+    for(int i = 0; i < N; ++i) 
+        for(int j = 0; j <= i; ++j) {
+            if(!j) c[i][j] = 1;
+            else c[i][j] = (c[i - 1][j] + c[i - 1][j - 1]) % mod;
+        }
+}
+
+int main() {
+    
+    init();
+    
+    int n;
+    cin >> n;
+    
+    while(n--) {
+        int a, b;
+        
+        cin >> a >> b;
+        
+        cout << c[a][b] << endl;
+        
+    }
+    return 0;
+}
+```
+
+2. 数据范围   $1 \leq n \leq 10000$，   $1 \leq b \leq a \leq 10^5$ 
+
+```C++
+#include <iostream>
+
+using namespace std;
+
+typedef long long LL;
+
+
+const int N = 100010, mod = 1e9 + 7;
+
+int fact[N], infact[N];
+
+int qmi(int a, int k, int p) {
+    
+    int res = 1;
+    
+    while(k) {
+        if(k & 1) res = (LL)res * a % p;
+        a = (LL) a * a % p;
+        
+        k >>= 1;
+    }
+    return res;
+}
+
+
+int main() {
+    fact[0] = infact[0] = 1;
+    for(int i = 1; i < N; ++i) {
+        fact[i] = (LL)fact[i - 1] * i % mod;
+        infact[i] = (LL)infact[i - 1] * qmi(i, mod - 2, mod) % mod;
+    }
+    
+    int n;
+    
+    cin >> n;
+
+    
+    while(n--) {
+        int a, b;
+        
+        cin >> a >> b;
+        
+        cout << (LL)fact[a] * infact[a - b] % mod * infact[b] % mod << endl;
+        
+    }
+    
+    return 0;
+}
+```
+
+### 卢卡斯定理
+
+  题目描述   给定 $n$ 组询问，每组询问给定三个整数 $a, b, p$ ，其中 $ p$ 是质数，输出 $C_{a}^{b} \mod p $ 的值。
+
+数据范围:
+
+ $1 \leq n \leq 20$，
+
+ $1 \leq b \leq a \leq 10^{18}$， 
+
+$1 \leq p \leq 10^{5}$
+
+```C++
+#include <iostream>
+
+typedef long long LL;
+
+using namespace std;
+
+int p;
+
+int qmi(int a, int k) {
+    
+    int res = 1;
+    while(k) {
+        if(k & 1) res = (LL)res * a % p;
+        a = (LL)a * a % p;
+        k >>= 1;
+    }
+    
+    return res;
+}
+
+int C(int a, int b) {
+    int res = 1;
+    for(int i = 1, j = a; i <= b; ++i, --j) {
+        res = (LL)res * j % p;
+        res = (LL)res * qmi(i, p - 2) % p;
+    }
+    
+    return res;
+}
+
+LL lucas(LL a, LL b) {
+    if(a < p && b < p) return C(a, b);
+    else {
+        return (LL)C(a % p, b % p) * lucas(a / p, b / p) % p;
+    }
+}
+
+
+int main() {
+    
+    int n; 
+    
+    cin >> n;
+    
+    while(n--) {
+        LL a, b;
+        
+        cin >> a >> b >> p;
+        
+        
+        cout << lucas(a, b) << endl;
+    }
+    
+    return 0;
+}
+```
+
+### 计算真实值
+
+- 针对每个质数 p，使用勒让德公式分别计算 \(a!\)、\(b!\) 和 \((a - b)!\) 中质因数 p 的幂次。
+- 组合数 $C_{a}^b $中质因数 p 的幂次等于 \(a!\) 中质因数 p 的幂次减去 \(b!\) 和 \((a - b)!\) 中质因数 p 的幂次，将结果存于 `sum` 数组。
+
+```c++
+#include <iostream>
+#include <algorithm>
+#include <vector>
+
+using namespace std;
+
+const int N = 5010;
+
+int primes[N], cnt;
+int sum[N];
+bool st[N];
+
+void cnt_primes(int n) {
+    for(int i = 2; i <= n; ++i) {
+        if(!st[i]) primes[cnt++] = i;
+        for(int j = 0; primes[j] <= n / i; ++j) {
+            st[primes[j] * i] = true;
+            if(i % primes[j] == 0) break;
+        }
+    }
+}
+
+int get(int n, int p) {
+    
+    int res = 0;
+    
+    while(n) {
+        res += n / p;
+        n /= p;
+    }
+    return res;
+}
+
+vector<int> mul(vector<int> a, int b) {
+    vector<int> c;
+    int t = 0;
+    for(int i = 0; i < a.size(); ++i) {
+        t += a[i] * b;
+        c.push_back(t % 10);
+        t /= 10;
+    }
+    
+    while(t) {
+        c.push_back(t % 10);
+        t /= 10;
+    }
+    
+    return c;
+}
+
+int main() {
+    
+    int a, b;
+    
+    cin >> a >> b;
+    
+    cnt_primes(a);
+    
+    for(int i = 0; i < cnt; ++i) {
+        int p = primes[i];
+        sum[i] = get(a, p) - get(b, p) - get(a - b, p);
+    }
+    
+    
+    vector<int> res;
+    res.push_back(1);
+    
+    for(int i = 0; i < cnt; ++i)
+        for(int j = 0; j < sum[i]; ++j) 
+            res = mul(res, primes[i]);
+            
+            
+    for(int i = res.size() - 1; i >= 0; --i) cout << res[i];
+    
+    puts("");
+    
+    return 0;
+}
+```
+
+### 卡特兰数
+
+$ C_n = \frac{1}{n+1} \binom{2n}{n} = \frac{(2n)!}{(n+1)! \, n!}$
+
+代码中的res即是卡特兰数
+
+```C++
+#include <iostream>
+
+using namespace std;
+
+const int N = 100010, mod = 1e9 + 7;
+
+typedef long long LL;
+
+int qmi(int a,int k, int p) {
+    
+    int res = 1;
+    while(k) {
+        if(k & 1) res = (LL)res * a % p;
+        a = (LL)a * a % p;
+        k >>= 1;
+    }
+    return res;
+}
+
+
+int main() {
+    
+    int n;
+    
+    cin >> n;
+    
+    int a = 2 * n;
+    int b = n;
+    int res = 1;
+    
+    for(int i = a; i > a - b; --i) res = (LL) res * i % mod;
+    for(int j = 1; j <= b + 1; ++j) res = (LL)res * qmi(j, mod - 2, mod) % mod;
+    cout << res;
+    
+    
+    return 0;
+}
+```
+
+
+
+## 18. 容斥原理
+
+给定一个整数 `n` 和 `m` 个不同的质数 `p1, p2, ..., pm`。
+
+请你求出 1 ～ n 中能被 `p1, p2, ..., pm` 中的至少一个数整除的整数有多少个。
+
+```C++
+#include <iostream>
+#include <algorithm>
+using namespace std;
+
+// 定义常量 N 为 20
+const int N = 20;
+typedef long long LL;
+
+// 输入参数 m 和 n，质数数组 p[] 的最大长度为 N
+int m, n;
+int p[N];
+
+int main()
+{
+    // 输入 n 和 m 的值，n 是上限，m 是质数的个数
+    cin >> n >> m;
+    
+    // 输入 m 个质数并存储到数组 p[] 中
+    for(int i = 0; i < m; i++) {
+        cin >> p[i];
+    }
+
+    int res = 0;  // 用于存储最终结果，即能被至少一个质数整除的数的个数
+
+    // 遍历所有可能的子集，子集的个数是 2^m - 1
+    for(int i = 1; i < 1 << m; i++) {  // 从 1 到 2^m - 1，表示所有的子集
+        int t = 1;  // 用于存储当前子集的质数的乘积
+        int cnt = 0;  // 用于记录当前子集中质数的个数
+        
+        // 遍历每个质数，检查当前子集是否包含该质数
+        for(int j = 0; j < m; j++) {
+            // 判断当前子集是否包含第 j 个质数
+            if(i >> j & 1) {
+                cnt++;  // 子集中的质数个数加 1
+                // 如果乘积超出 n，提前结束当前子集的计算
+                if((LL)t * p[j] > n) {
+                    t = -1;  // 设置 t 为 -1，表示该子集的乘积无效
+                    break;
+                }
+                t *= p[j];  // 更新乘积 t
+            }
+        }
+
+        // 如果 t 不为 -1，说明当前子集的乘积合法
+        if(t != -1) {
+            // 如果子集的质数个数为奇数，按照容斥原理加上该子集的贡献
+            // 如果子集的质数个数为偶数，按照容斥原理减去该子集的贡献
+            if(cnt % 2) 
+                res += n / t;  // 计算 n 中能被 t 整除的数的个数，并加到结果中
+            else 
+                res -= n / t;  // 计算 n 中能被 t 整除的数的个数，并从结果中减去
+        }
+    }
+
+    // 输出最终结果
+    cout << res << endl;
+
+    return 0;
+}
+
+```
+
+
+
+
+
+## 19 博弈论
+
+### **Nim游戏**
+
+给定 n 堆石子，两位玩家轮流操作，每次操作可以从任意一堆石子中拿走任意数量的石子（可以拿完，但不能不拿），最后无法进行操作的人视为失败。
+
+问如果两人都采用最优策略，先手是否必胜。
+
+-  在Nim游戏中，判断先手是否必胜的核心数学公式基于**异或运算（XOR）**，公式表述如下：   设游戏中有 \( n \) 堆物品，每堆物品数量分别为 \( $a_1, a_2, \dots, a_n$ \)，
+- **异或和**为：$    G = a_1 \oplus a_2 \oplus \dots \oplus a_n   $ 
+-  若 \( G != 0 \)，则**先手必胜**；   
+-  若 \( G = 0 \)，则**先手必败**。
+
+输入样例：
+
+```
+2
+2 3
+```
+
+输出样例：
+
+```cpp
+Yes
+```
+
+**代码：**
+
+```cpp
+#include <iostream>
+using namespace std;
+int n;
+int main() {
+    cin >> n;
+    int t = 0;
+    for(int i = 0; i < n ; i++)
+    {
+        int x ;
+        cin >> x;
+        t ^= x;
+    }
+    if(!t) cout  << "No";
+    else cout << "Yes";
+    
+    
+    
+    return 0;
+}
+```
+
+### 台阶Nim游戏
+
+现在，有一个 $n$ 级台阶的楼梯，每级台阶上都有若干个石子，其中第 $i$ 级台阶上有 $a_i$ 个石子 ($i \geq 1$)。 两位玩家轮流操作，每次操作可以从任意一级台阶上拿若干个石子放到下一级台阶中（不能不拿）。 已经拿到地面上的石子不能再拿，最后无法进行操作的人视为失败。 问如果两人都采用最优策略，先手是否必胜。 
+
+```C++
+#include <iostream>
+
+using namespace std;
+int n;
+
+int main() {
+    cin >> n;
+    int t = 0;
+    for(int i = 1; i <= n ; i++)
+    {
+        int x ;
+        cin >> x;
+        if(i % 2)t ^= x;
+    }
+    if(!t) cout  << "No";
+    else cout << "Yes";
+    
+    
+    
+    return 0;
+}
+```
+
+
+
+### Mex()
+
+`mex(minimal excludant)`是对一个集合的运算，表示最小的不属于这个集合的非负整数 。
+
+比如，mex{0, 1, 2, 4}=3、mex{1, 3, 5}=0、mex{} = 0 。
+
+### SG函数
+
+ 递归计算SG值 
+
+- 对于终态（没有出边的状态，即无法进行合法操作的状态 ），其SG值为0。
+
+- 对于非终态 \(x\) ，计算其所有后继状态 \(y_i\) 的SG值 \(SG(y_i)\) 。
+
+  假设 \(x\) 的后继状态的SG值集合为$ S = \{SG(y_1),SG(y_2),\cdots,SG(y_k)\}$ ，那么 $SG(x)=mex(S)$  。即 SG(x) 是最小的不属于集合 \(S\) 的非负整数。
+
+
+
+### 集合Nim游戏
+
+给定 \(n\) 堆石子以及一个由 \(k\) 个不同正整数构成的数字集合 \(S\)。 现在有两位玩家轮流操作，每次操作可以从任意一堆石子中拿取石子，每次拿取的石子数量必须包含于集合 \(S\)，最后无法进行操作的人视为失败。 问如果两人都采用最优策略，先手是否必胜。 
+
+```c++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+#include <unordered_set>
+
+
+using namespace std;
+
+
+const int M = 110, N = 10010;
+
+int s[M], f[N];
+
+int n;
+
+int sg(int x) {
+    if(f[x] != -1) return f[x];
+    
+    unordered_set<int> S;
+    for(int i = 0; i < n; ++i) {
+        int sum = s[i];
+        if(x >= sum) S.insert(sg(x - sum));
+    }
+    
+    for(int i = 0; ;++i) 
+        if(!S.count(i)) 
+            return f[x] = i;
+    
+}
+
+
+int main() {
+    
+    cin >> n;
+    
+    for(int i = 0; i < n; ++i) {
+        cin >> s[i];
+    }
+    
+    memset(f, -1, sizeof f);
+    int k;
+    
+    cin >> k;
+    
+    int res = 0;
+    
+    for(int i = 0; i < k; ++i) {
+        int x;
+        cin >> x;
+        res ^= sg(x);
+    }
+    
+    if(res) puts("Yes");
+    else puts("No");
+    
+    return 0;
+}
+```
+
+
+
+
+
+### 拆分Nim游戏
+
+给定 n 堆石子，两位玩家轮流操作，每次操作可以取走其中的一堆石子，然后放入两堆**规模更小**的石子（新堆规模可以为 00，且两个新堆的石子总数可以大于取走的那堆石子数），最后无法进行操作的人视为失败。
+
+问如果两人都采用最优策略，先手是否必胜。
+
+```C++
+#include <iostream>
+#include <cstring>
+#include <unordered_set>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 110;
+
+int n;
+
+int f[N];
+
+int sg(int x) {
+    if(f[x] != -1) return f[x];
+    
+    unordered_set<int> S;
+    
+    for(int i = 0; i < x; ++i)
+        for(int j = 0; j <= i; ++j) 
+            S.insert(sg(i) ^ sg(j));
+    
+    for(int i = 0; ; ++i) 
+        if(!S.count(i)) 
+            return f[x] = i;
+}
+
+
+int main() {
+    
+    cin >> n;
+    
+    int res = 0;
+    memset(f, -1, sizeof f);
+    
+    for(int i = 0; i < n; ++i) {
+        int x;
+        cin >> x;
+        res ^= sg(x);
+    }
+    
+    if(res) puts("Yes");
+    else puts("No");
+    
+    return 0;
+}
+```
+
+ 
