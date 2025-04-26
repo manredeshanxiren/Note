@@ -1301,13 +1301,9 @@ int main() {
 }
 ```
 
-
-
-
-
 ### 拆分Nim游戏
 
-给定 n 堆石子，两位玩家轮流操作，每次操作可以取走其中的一堆石子，然后放入两堆**规模更小**的石子（新堆规模可以为 00，且两个新堆的石子总数可以大于取走的那堆石子数），最后无法进行操作的人视为失败。
+给定 n 堆石子，两位玩家轮流操作，每次操作可以取走其中的一堆石子，然后放入两堆**规模更小**的石子（新堆规模可以为 0，且两个新堆的石子总数可以大于取走的那堆石子数），最后无法进行操作的人视为失败。
 
 问如果两人都采用最优策略，先手是否必胜。
 
@@ -1361,3 +1357,233 @@ int main() {
 ```
 
  
+
+# 搜索与图论
+
+## 1.dfs-->排列
+
+```C++
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 10;
+
+int path[N];
+bool st[N];
+int n;
+
+void dfs(int u) {
+    if(n == u) {
+        for(int i = 0; i < n; ++i) {
+            printf("%d ", path[i]);
+        }
+        puts("");
+    }
+    
+    for(int i = 1; i <= n; ++i) {
+        if(!st[i]){
+            path[u] = i;
+            st[i] = true;
+            dfs(u + 1);
+            st[i] = false;
+        }
+    }
+}
+
+
+int main() {
+    cin >> n;
+    dfs(0);
+    return 0;
+}
+```
+
+## 2. N皇后
+
+```C++
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 20;
+
+bool col[N], dg[N], udg[N];
+
+char g[N][N];
+
+int n;
+
+void dfs(int u) {
+    
+    if(n == u) {
+        for(int i = 0; i < n; ++i) {
+            puts(g[i]);
+        }
+        puts("");
+    }
+    
+    for(int i = 0; i < n; ++i) {
+        if(!col[i] && !dg[u + i] && !udg[n - u + i]) {
+            col[i] = dg[u + i] = udg[n - u + i] = true;
+            g[u][i] = 'Q';
+            dfs(u + 1);
+            g[u][i] = '.';
+            col[i] = dg[u + i] = udg[n - u + i] = false;
+        }
+    }
+    
+}
+
+int main() {
+    
+    cin >> n;
+    
+    for(int i = 0; i < n; ++i)
+        for(int j = 0; j < n; ++j) {
+            g[i][j] = '.';
+        }
+    
+    dfs(0);
+    
+    return 0;
+}
+```
+
+## 3. BFS
+
+BFS可以用于找最短路
+
+### 走迷宫
+
+给定一个 `n × m` 的二维整数数组，用来表示一个迷宫，数组中只包含 `0` 或 `1`，其中 `0` 表示可以走的路，`1` 表示不可通过的墙壁。 最初，有一个人位于左上角 `(1, 1)` 处，已知该人每次可以向上、下、左、右任意一个方向移动一个位置。 请问，该人从左上角移动至右下角 `(n, m)` 处，至少需要移动多少次。 数据保证 `(1, 1)` 处和 `(n, m)` 处的数字为 `0`，且一定至少存在一条通路。 
+
+```C++
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+
+using namespace std;
+
+typedef pair<int, int> PII;
+
+const int N = 110;
+
+int g[N][N];
+int d[N][N];
+PII q[N * N];
+
+int n, m;
+
+void bfs() {
+    int hh = 0, tt = 0;
+    memset(d, -1, sizeof d);
+    q[0] = {1, 1};
+    d[1][1] = 0;
+    
+    while(hh <= tt) {
+        auto t =  q[hh++];
+        int dx[] = {-1, 0, 1, 0};
+        int dy[] = {0, 1, 0, -1};
+        
+        for(int i = 0; i < 4; ++i) {
+            int x = t.first + dx[i], y = t.second + dy[i];
+            if(x > 0 && x <= n && y > 0 && y <= m && d[x][y] == -1 && g[x][y] == 0) {
+                q[++tt] = {x, y};
+                d[x][y] = d[t.first][t.second] + 1;
+            }
+        }
+    }
+}
+
+
+int main() {
+    
+    cin >> n >> m;
+    
+    for(int i = 1; i <= n; ++i) 
+        for(int j = 1; j <= m; ++j) {
+            cin >> g[i][j];
+        }
+    bfs();
+    
+    cout << d[n][m];
+    
+    return 0;
+}
+```
+
+
+
+### 八字码
+
+在一个 `3 × 3` 的网格中，`1 ~ 8` 这 `8` 个数字和一个 `x` 恰好不重不漏地分布在其中。 例如： ``` 1 2 3 x 4 6 7 5 8 ``` 在游戏过程中，可以把 `x` 与其上、下、左、右四个方向之一的数字交换（如果存在）。 我们的目的是通过交换，使得网格变为如下排列（称为正确排列）： ``` 1 2 3 4 5 6 7 8 x ``` 
+
+```c++
+#include <iostream>
+#include <unordered_map>
+#include <string>
+#include <queue>
+
+using namespace std;
+
+string start;
+
+int bfs() {
+    
+    string end = "12345678x";
+    unordered_map<string, int> hash;
+    hash[start] = 0;
+    
+    queue<string> q;
+    q.push(start);
+    
+    int dx[] = {1, 0, -1, 0};
+    int dy[] = {0, -1, 0, 1};
+    
+    while(!q.empty()) {
+        
+        string t = q.front();
+        q.pop();
+        
+        int distance = hash[t];
+        
+        if(t == end) {
+            return distance; 
+        }
+        
+        int idx = t.find('x');
+        int x = idx / 3, y = idx % 3;
+        
+        for(int i = 0; i < 4; ++i) {
+            int nx = x + dx[i];
+            int ny = y + dy[i];
+            if(nx >= 0 && nx < 3 && ny >= 0 && ny < 3) {
+                swap(t[idx], t[nx * 3 + ny]);
+                if(!hash.count(t)) {
+                    hash[t] = distance + 1;
+                    q.push(t);
+                }
+                swap(t[idx], t[nx * 3 + ny]);
+            }
+        }
+    }
+    return -1;
+}
+
+
+int main() {
+    
+    for(int i = 0; i < 9; ++i) {
+        char c;
+        cin >> c;
+        start += c;
+    }
+    
+    cout << bfs();
+}
+
+```
+
