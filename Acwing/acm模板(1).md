@@ -1587,3 +1587,353 @@ int main() {
 
 ```
 
+## 4. 树与图的深度搜索
+
+### 树的重心
+
+题目描述 给定一棵树，树中包含 $n$ 个结点（编号 $1 \sim n$）和 $n - 1$ 条无向边。请找到树的重心，并输出将重心删除后，剩余各个连通块中点数的最大值。 
+
+**重心定义**：重心是指树中的一个结点，如果将这个点删除后，剩余各个连通块中点数的最大值最小，那么这个节点被称为树的重心。 
+
+```C++
+#include <iostream>
+#include <algorithm>
+#include <cstring>
+using namespace std;
+
+const int N = 100010, M = N * 2;
+
+int n;
+int h[N], e[M], ne[M], idx;
+bool st[N];
+int ans = N; // 初始化为一个较大的值
+
+// 添加边的函数
+void add(int a, int b)
+{
+    e[idx] = b, ne[idx] = h[a], h[a] = idx++;
+}
+
+// 深度优先搜索函数，返回以 u 为根的子树的节点数量
+int dfs(int u)
+{
+    st[u] = true;
+    int size = 1; // 记录以 u 为根的子树的节点数量
+    int max_part = 0; // 记录删除 u 后最大子树的节点数量
+
+    for (int i = h[u]; i != -1; i = ne[i])
+    {
+        int j = e[i];
+        if (!st[j])
+        {
+            int s = dfs(j);
+            size += s;
+            max_part = max(max_part, s);
+        }
+    }
+
+    // 计算删除 u 后父节点方向的子树的节点数量
+    max_part = max(max_part, n - size);
+
+    // 更新答案
+    ans = min(ans, max_part);
+
+    return size;
+}
+
+int main()
+{
+    cin >> n;
+
+    // 初始化表头数组
+    memset(h, -1, sizeof h);
+
+    // 读入边的信息
+    for (int i = 0; i < n - 1; i++)
+    {
+        int a, b;
+        cin >> a >> b;
+        add(a, b);
+        add(b, a); // 无向树，需要双向添加边
+    }
+
+    // 从任意节点开始进行深度优先搜索，这里从节点 1 开始
+    dfs(1);
+
+    cout << ans << endl;
+
+    return 0;
+}    
+```
+
+### 图中点的层次
+
+
+
+```c++
+#include <iostream>
+#include <queue>
+#include <cstring>
+
+
+using namespace std;
+
+
+
+const int N = 100010, M = N * 2;
+
+int h[N], e[M], ne[M], idx;
+
+int d[N];
+
+
+int n, m;
+
+void add(int a, int b) {
+    e[idx] = b, ne[idx] = h[a], h[a] = idx++;
+}
+
+int bfs() {
+    
+    queue<int> q;
+    
+    memset(d, -1, sizeof d);
+    q.push(1);
+    d[1] = 0;
+    
+    while(!q.empty()) {
+        
+        auto t = q.front();
+        q.pop();
+        for(int i = h[t]; i != -1; i = ne[i]) {
+            int j = e[i];
+            if(d[j] == -1) {
+                q.push(j);
+                d[j] = d[t] + 1;
+            }
+        }
+    }
+    
+    return d[n];
+}
+
+
+int main() {
+    
+    cin >> n >> m;
+    
+    memset(h, -1, sizeof h);
+
+    for(int i = 0; i < m; ++i) {
+        int a, b;
+        cin >> a >> b;
+        add(a, b);
+    }
+    
+    cout << bfs();
+    return 0;
+}
+```
+
+### 拓扑排序BFS
+
+```C++
+#include <iostream>
+#include <algorithm>
+#include <queue>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+
+const int N = 100010;
+int h[N], e[N], ne[N];
+int d[N];
+
+int n, m, idx;
+
+vector<int> res;
+
+void add(int a, int b) {
+    e[idx] = b, ne[idx] = h[a], h[a] = idx++;
+}
+
+int top_sort() {
+    queue<int> q;
+    
+    for(int i = 1; i <= n; ++i) {
+        if(d[i] == 0) {
+            q.push(i);
+            res.push_back(i);
+        }
+    }
+    
+    while(!q.empty()) {
+        auto t = q.front();
+        q.pop();
+        
+        for(int i = h[t]; i != -1; i = ne[i]) {
+            int j = e[i];
+            d[j]--;
+            if(d[j] == 0) {
+                q.push(j);
+                res.push_back(j);
+            }
+        }
+    }
+    
+    return res.size();
+}
+
+
+int main() {
+    
+    cin >> n >> m;
+    
+    memset(h, -1, sizeof h);
+    memset(d, 0, sizeof d);
+    
+    for(int i = 0; i < m; ++i) {
+        int a, b;
+        cin >> a >> b;
+        add(a, b);
+        d[b]++;
+    }
+    
+    if(top_sort() == n) {
+       for(auto v : res) {
+           cout << v << " ";
+       } 
+    } else {
+        puts("-1");
+    }
+    return 0;
+}
+```
+
+## 5. 最短路
+
+![image-20250427215950708](assets/image-20250427215950708.png)
+
+## 
+
+### Dijkstra
+
+```C++
+#include<iostream>
+#include<algorithm>
+#include<cstring>
+using namespace std;
+const int  N = 510;
+int g[N][N];
+int n,m;
+int dist[N];
+bool st[N];
+int dijkstra()
+{
+    memset(dist,0x3f,sizeof dist);
+    
+    dist[1] = 0;
+    
+    for(int i = 0; i < n - 1; i++)
+    {
+        int  t = -1;
+        
+        for(int j = 1; j <= n; j++)
+            if(!st[j] && (t == -1 || dist[t] > dist[j]))
+                t = j;
+        
+        st[t] =true;
+        
+        for(int j = 1; j <= n; j++)
+            dist[j] = min(dist[j], dist[t] + g[t][j]);
+    }
+    
+    if(dist[n] == 0x3f3f3f3f) return -1;
+    
+    return dist[n];
+}
+int main()
+{
+    cin>>n>>m;
+    memset(g,0x3f,sizeof g);
+    while(m--)
+    {
+        int a,b,c;
+        cin>>a>>b>>c;
+        //重路更新为最短路
+        g[a][b] = min(g[a][b], c);
+    }
+    cout<<dijkstra()<<endl;
+}
+```
+
+### DijkstraII
+
+```C++
+#include <iostream>
+#include <algorithm>
+#include <queue>
+#include <vector>
+#include <cstring>
+
+using namespace std;
+
+typedef pair<int, int> PII;
+
+const int N = 100010, M = N * 2;
+
+int h[N], e[M], ne[M], w[M], dist[N];
+
+int n, m, idx;
+
+void add(int a, int b, int c) {
+    e[idx] = b, w[idx] = c, ne[idx] = h[a], h[a] = idx ++;
+}
+
+int dijkstra() {
+    
+    memset(dist, 0x3f, sizeof dist);
+    dist[1] = 0;
+    
+    priority_queue<PII, vector<PII>, greater<PII>> heap;
+    
+    heap.push({0, 1});
+    
+    
+    while(!heap.empty()) {
+        auto t = heap.top();
+        heap.pop();
+
+        for(int i = h[t.second]; i != -1; i = ne[i]) {
+            int j = e[i];
+            if(dist[j] > t.first + w[i]) {
+                dist[j] = t.first + w[i];
+                heap.push({dist[j], j});
+            }
+        }
+    }
+    if(dist[n] == 0x3f3f3f3f) return -1;
+    return dist[n];
+}
+
+
+
+int main() {
+    
+    cin >> n >> m;
+    
+    memset(h, -1, sizeof h);
+    
+    for(int i = 0; i < m; ++i) {
+        int a, b, c;
+        cin >> a >> b >> c;
+        add(a, b, c);
+    }
+    
+    cout << dijkstra();
+    
+    return 0;
+}
+```
+
