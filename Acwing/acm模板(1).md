@@ -1884,6 +1884,7 @@ typedef pair<int, int> PII;
 const int N = 100010, M = N * 2;
 
 int h[N], e[M], ne[M], w[M], dist[N];
+bool st[N];
 
 int n, m, idx;
 
@@ -1904,7 +1905,9 @@ int dijkstra() {
     while(!heap.empty()) {
         auto t = heap.top();
         heap.pop();
-
+        
+        if(st[t.second]) continue;
+        st[t.second] = true; 
         for(int i = h[t.second]; i != -1; i = ne[i]) {
             int j = e[i];
             if(dist[j] > t.first + w[i]) {
@@ -1935,5 +1938,617 @@ int main() {
     
     return 0;
 }
+```
+
+### bellman_ford
+
+用于求最多经过 k 条边的最短距离类似问题；
+
+给定一个 n 个点 mm 条边的有向图，图中可能存在重边和自环， **边权可能为负数**。
+
+请你求出从 1 号点到 n 号点的最多经过 k 条边的最短距离，如果无法从 1 号点走到 n 号点，输出 `impossible`。
+
+```C++
+#include <iostream>
+#include <cstring>
+
+using namespace std;
+
+/* ---------- 常量区 ---------- */
+const int N   = 510;          // 最大顶点数（题目保证 n ≤ 500）
+const int M   = 100010;       // 最大边数（题目保证 m ≤ 1e5）
+const int INF = 0x3f3f3f3f;   // 表示“无穷大”，用于初始化最短距离
+
+/* ---------- 全局变量 ---------- */
+int n, m, k;                  // n: 点数, m: 边数, k: 允许的最大边数
+int dist[N], backup[N];       // dist 存当前最短路结果，backup 存上一轮结果
+
+/* ---------- 边的结构体 ---------- */
+struct Edge {
+    int a, b, w;              // a->b 的有向边，权值 w (可为负)
+} edges[M];
+
+/* ---------- Bellman-Ford（k 次松弛版） ---------- *
+ * 作用：求 1 号点到 n 号点、且最多经过 k 条边时的最短距离
+ * 若 dist[n] >= INF/2 则视为不可达
+ */
+int bellman_ford()
+{
+    /* 1) 初始化：除源点外全部设为 INF */
+    memset(dist, 0x3f, sizeof dist);
+    dist[1] = 0;                              // 源点到自身距离为 0
+
+    /* 2) 进行 k 轮松弛（每轮用 backup 记录上轮全部结果） */
+    for (int i = 0; i < k; ++i) {
+        memcpy(backup, dist, sizeof dist);    // 拷贝一份上一轮结果
+
+        for (int j = 0; j < m; ++j) {         // 枚举每一条边
+            int a = edges[j].a,
+                b = edges[j].b,
+                w = edges[j].w;
+
+            /* 只有当 a 可达时才尝试更新 b，避免 INF + w 溢出 */
+            if (backup[a] < INF)
+                dist[b] = min(dist[b], backup[a] + w);
+        }
+    }
+    return dist[n];                           // 返回最终结果
+}
+
+/* ---------- 主函数 ---------- */
+int main()
+{
+    ios::sync_with_stdio(false);              // 加速 cin/cout
+    cin.tie(nullptr);
+
+    /* 读入 n, m, k */
+    cin >> n >> m >> k;
+
+    /* 读入 m 条边 */
+    for (int i = 0; i < m; ++i)
+        cin >> edges[i].a >> edges[i].b >> edges[i].w;
+
+    /* 求解并输出 */
+    int ans = bellman_ford();
+    if (ans > INF / 2)                        // 不可达判定
+        cout << "impossible\n";
+    else
+        cout << ans << '\n';
+
+    return 0;
+}
+```
+
+### spfa
+
+用队列优化了上一个算法	
+
+```C++
+#include <iostream>
+#include <queue>
+#include <cstring>
+
+using namespace std;
+
+const int N = 100010, M = N * 2;
+
+int h[N], w[M] ,e[M], ne[M]; 
+int dist[N];
+bool st[N];
+
+int n, m, idx;
+
+void add(int a, int b, int c) {
+    e[idx] = b, w[idx] = c, ne[idx] = h[a], h[a] = idx++;
+}
+
+int spfa(){
+    
+    memset(dist, 0x3f, sizeof dist);
+    queue<int> q;
+    q.push(1);
+    dist[1] = 0;
+    st[1] = true;
+    
+    while(q.size()){
+        int t = q.front();
+        q.pop();
+        st[t] = false;
+        
+        for(int i = h[t]; i != -1; i = ne[i]){
+            int j = e[i];
+            if(dist[j] > dist[t] + w[i]) {
+                dist[j] = dist[t] + w[i];
+                if(!st[j]) {
+                    q.push(j);
+                    st[j] = true;
+                }
+            }
+        }
+    }
+    return dist[n];
+}
+
+
+int main() {
+    
+    cin >> n  >> m;
+    
+    memset(h, -1, sizeof h);
+    
+    for(int i = 0; i < m; ++i) {
+        int a, b, c;
+        cin >> a >> b >> c;
+        add(a, b, c);
+    }
+    
+    int res = spfa();
+    if(res == 0x3f3f3f3f) puts("impossible");
+    else cout << res;
+    
+    
+    return 0;
+}
+```
+
+### spfa判负环
+
+```c++
+#include <iostream>
+#include <queue>
+#include <cstring>
+
+using namespace std;
+
+const int N = 100010, M = N * 2;
+
+int h[N], w[M] ,e[M], ne[M]; 
+int dist[N], cnt[N];
+bool st[N];
+
+int n, m, idx;
+
+void add(int a, int b, int c) {
+    e[idx] = b, w[idx] = c, ne[idx] = h[a], h[a] = idx++;
+}
+
+int spfa(){
+    
+    queue<int> q;
+    for(int i = 1; i <= n; ++i) {
+        q.push(i);
+        st[i] = true;
+    }
+    
+    while(q.size()){
+        int t = q.front();
+        q.pop();
+        st[t] = false;
+        
+        for(int i = h[t]; i != -1; i = ne[i]){
+            int j = e[i];
+            if(dist[j] > dist[t] + w[i]) {
+                dist[j] = dist[t] + w[i];
+                cnt[j] = cnt[t] + 1;
+                if(cnt[j] > n) return true;
+                if(!st[j]) {
+                    q.push(j);
+                    st[j] = true;
+                }
+            }
+        }
+    }
+    return false;
+}
+
+
+int main() {
+    
+    cin >> n  >> m;
+    
+    memset(h, -1, sizeof h);
+    
+    for(int i = 0; i < m; ++i) {
+        int a, b, c;
+        cin >> a >> b >> c;
+        add(a, b, c);
+    }
+    
+    int res = spfa();
+    if(res) puts("Yes");
+    else puts("No");
+    
+    
+    return 0;
+}
+```
+
+
+
+### prim
+
+朴素找最小生成树
+
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+
+/* -------- 常量与宏 -------- */
+const int N = 510;           // 最大点数
+#define INF 0x3f3f3f3f       // 无穷大（十六进制写法）
+
+/* -------- 全局变量 -------- */
+int dist[N];                 // dist[j]：当前生成树到 j 的最短边权
+int g[N][N];                 // 邻接矩阵，g[u][v] 表示边 (u,v) 的权值
+bool st[N];                  // st[j] = true 表示顶点 j 已加入生成树
+int n, m;                    // n：顶点数，m：边数
+
+/* -------- Prim 算法（邻接矩阵版） --------
+   返回最小生成树权值；若图不连通则返回 INF */
+int prim() {
+    int res = 0;                             // 生成树总权值
+    memset(dist, 0x3f, sizeof dist);         // 初始 dist 全为 INF
+
+    for (int i = 0; i < n; ++i) {            // 共选 n 个顶点
+        int t = -1;                          // t：本轮待加入的顶点
+        for (int j = 1; j <= n; ++j)         // 找到未选、且 dist 最小的顶点
+            if (!st[j] && (t == -1 || dist[t] > dist[j]))
+                t = j;
+
+        if (i && dist[t] == INF) return INF; // 若非首轮且无法联通 → 图不连通
+
+        if (i) res += dist[t];               // 从第 2 个顶点开始累加权值
+
+        st[t] = true;                        // 标记顶点 t 已加入生成树
+
+        for (int j = 1; j <= n; ++j)         // 用顶点 t 更新其他顶点的最小边权
+            dist[j] = min(dist[j], g[t][j]);
+    }
+    return res;                              // 返回最小生成树权值
+}
+
+int main() {
+    cin >> n >> m;
+
+    memset(g, 0x3f, sizeof g);               // 初始化邻接矩阵为 INF
+
+    for (int i = 0; i < m; ++i) {            // 读入 m 条边
+        int a, b, c;
+        cin >> a >> b >> c;
+        g[a][b] = g[b][a] = min(g[a][b], c); // 处理重边：保留较小权值
+    }
+
+    int res = prim();                        // 运行 Prim 算法
+    if (res == INF) puts("impossible");      // 不连通则输出 impossible
+    else cout << res;                        // 否则输出最小生成树权值
+    return 0;
+}
+```
+
+### Floyd
+
+```C++
+#include <iostream>
+
+using namespace std;
+
+#define INF 1e9          // “无穷大”——初始的不可达距离
+
+const int N = 210;       // 最大顶点数
+
+int d[N][N];             // d[i][j]：顶点 i 到 j 的最短距离（邻接矩阵）
+int n, k, m;             // n：顶点数；k：边数；m：询问次数
+
+/* ---------------- Floyd–Warshall 算法 ----------------
+   功能：在 O(n^3) 时间内求所有点对最短路径 */
+void Floyd() {
+    for (int k = 1; k <= n; ++k)          // 枚举中转点 k
+        for (int i = 1; i <= n; ++i)      // 枚举起点 i
+            for (int j = 1; j <= n; ++j)  // 枚举终点 j
+                d[i][j] = min(d[i][j], d[i][k] + d[k][j]); // 松弛
+}
+
+int main() {
+    cin >> n >> k >> m;                   // 读入点数、边数、查询数
+
+    /* ----- 初始化邻接矩阵 ----- */
+    for (int i = 1; i <= n; ++i)
+        for (int j = 1; j <= n; ++j)
+            if (i == j) d[i][j] = 0;      // 自己到自己距离为 0
+            else        d[i][j] = INF;    // 其它设为 INF（不可达）
+
+    /* ----- 读入 k 条边 ----- */
+    while (k--) {
+        int a, b, c;
+        cin >> a >> b >> c;               // 有向边 a→b，权值 c
+        d[a][b] = min(d[a][b], c);        // 处理重边：保留最小权值
+    }
+
+    Floyd();                              // 运行 Floyd 算法求 APSP
+
+    /* ----- 回答 m 次查询 ----- */
+    while (m--) {
+        int a, b;
+        cin >> a >> b;                    // 查询 a→b 的最短距离
+        if (d[a][b] > INF / 2)            // 不可达：仍为“无穷大” 这里/2的原因是有很多负权值
+            puts("impossible");
+        else
+            cout << d[a][b] << endl;      // 输出最短距离
+    }
+    return 0;
+}
+```
+
+###  Kruskal
+
+```C++
+#include <iostream>
+#include <cstring>
+#include <algorithm>
+
+using namespace std;
+const int N = 100010;
+int p[N];//保存并查集
+
+struct E{
+    int a;
+    int b;
+    int w;
+    bool operator < (const E& rhs){//通过边长进行排序
+        return this->w < rhs.w;
+    }
+
+}edg[N * 2];
+int res = 0;
+
+int n, m;
+int cnt = 0;
+int find(int a){//并查集找祖宗
+    if(p[a] != a) p[a] = find(p[a]);
+    return p[a];
+}
+void klskr(){
+    for(int i = 1; i <= m; i++)//依次尝试加入每条边
+    {
+        int pa = find(edg[i].a);// a 点所在的集合
+        int pb = find(edg[i].b);// b 点所在的集合
+        if(pa != pb){//如果 a b 不在一个集合中
+            res += edg[i].w;//a b 之间这条边要
+            p[pa] = pb;// 合并a b
+            cnt ++; // 保留的边数量+1
+        }
+    }
+}
+int main()
+{
+
+    cin >> n >> m;
+    for(int i = 1; i <= n; i++) p[i] = i;//初始化并查集
+    for(int i = 1; i <= m; i++){//读入每条边
+        int a, b , c;
+        cin >> a >> b >>c;
+        edg[i] = {a, b, c};
+    }
+    sort(edg + 1, edg + m + 1);//按边长排序
+    klskr();
+    //如果保留的边小于点数-1，则不能连通
+    if(cnt < n - 1) {
+        cout<< "impossible";
+        return 0;
+    }
+    cout << res;
+    return 0;
+}
+```
+
+### 并查集实现
+
+```c++
+class UnionFindSet
+{
+public:
+	UnionFindSet(size_t n)
+		:_ufs(n, -1)
+	{}
+	//两个集合合并
+	void Union(int x1, int x2)
+	{
+		//先找到这两个集合的根
+		int root1 = FindRoot(x1);
+		int root2 = FindRoot(x2);
+		//本身在一个集合中
+		if (root1 == root2)
+		{
+			return;
+		}
+		//我们姑且默认往小的下标中合并，这里我们随意，也可以不加
+		if (root1 > root2)
+		{
+			swap(root1, root2);
+		}
+		_ufs[root1] += _ufs[root2];
+		_ufs[root2] = root1;
+	}
+	//寻找某一个元素的根节点下标
+	int FindRoot(int x)
+	{
+		int parent = x;
+		while (_ufs[parent] >= 0)
+		{
+			parent = _ufs[parent];
+		}
+		return parent;
+	}
+	//判断是否在一个集合中
+	bool InSet(int x1, int x2)
+	{
+		return FindRoot(x1) == FindRoot(x2);
+	}
+	//集合的个数
+	size_t SetSize()
+	{
+		size_t size = 0;
+		for (size_t i = 0; i < _ufs.size(); i++)
+		{
+			if (_ufs[i] < 0)
+			{
+				size++;
+			}
+		}
+		return size;
+	}
+private:
+	vector<int> _ufs;
+};
+
+```
+
+### 二分图染色
+
+```c++
+/*******************************************************
+ * 功能 : 判断给定无向图是否为二分图
+ * 算法 : 深度优先搜索（DFS）+ 二着色法
+ * 说明 : 仅在原代码基础上增加注释，逻辑与实现保持不变
+ *******************************************************/
+
+#include <iostream>
+#include <cstring>
+using namespace std;
+
+/*-------------- 常量与全局变量 --------------*/
+const int N = 100010;        // 最大点数
+const int M = N * 2;         // 最大边数（无向图需开两倍空间）
+
+int h[N];       // 邻接表表头数组，h[u] 存储顶点 u 的第一条边的编号
+int e[M];       // 边的目标顶点 e[idx] 表示编号 idx 对应的边指向的顶点
+int ne[M];      // 同一顶点的下一条边的编号
+int color[N];   // 颜色数组：0 表示未染色，1 / 2 表示两种颜色
+
+int idx;        // 当前已存储的边的数量，即下一条边的编号
+int n, m;       // n 为顶点数，m 为边数
+
+/*-------------- 边的插入（邻接表） --------------*/
+void add(int a, int b) {
+    e[idx] = b;        // 存储边的终点
+    ne[idx] = h[a];    // 将原先 a 的第一条边接到新边之后
+    h[a] = idx++;      // 更新 a 的第一条边为新边
+}
+
+/*-------------- 深度优先染色 --------------*/
+bool dfs(int u, int c) {
+    color[u] = c;                 // 给顶点 u 染色 c
+
+    for (int i = h[u]; i != -1; i = ne[i]) {  // 枚举 u 的所有邻边
+        int j = e[i];                          // 邻接顶点 j
+        if (!color[j]) {                       // 若 j 未染色
+            if (!dfs(j, 3 - c)) return false;  // 递归染成对立颜色，若失败返回 false
+        }
+        else if (color[j] == c) return false;  // 若邻点颜色与 u 相同，则不是二分图
+    }
+    return true;   // 所有邻点染色成功且无冲突
+}
+
+/*-------------- 主函数 --------------*/
+int main() {
+
+    cin >> n >> m;
+
+    memset(h, -1, sizeof h);  // 初始化邻接表表头为 -1，表示无边
+
+    /* 读取输入并建图（无向图需插入两条有向边） */
+    for (int i = 0; i < m; ++i) {
+        int a, b;
+        cin >> a >> b;
+        add(a, b);
+        add(b, a);
+    }
+
+    bool flag = true;   // 标记图是否为二分图
+
+    /* 对每个连通块进行 DFS 染色 */
+    for (int i = 1; i <= n; ++i) {
+        if (!color[i]) {            // 未染色则作为新的连通块起点
+            if (!dfs(i, 1)) {       // 尝试从颜色 1 开始染色
+                flag = false;       // 发现冲突
+                break;
+            }
+        }
+    }
+
+    /* 输出结果 */
+    if (flag) cout << "Yes" << endl;
+    else      cout << "No"  << endl;
+
+    return 0;
+}
+
+```
+
+### 二分图最大匹配(匈牙利)
+
+```c++
+#include<iostream>
+#include<algorithm>
+#include<cstring>
+
+using namespace std;
+
+const int N = 510, M = 1e5 + 10;  // N为节点数上限，M为边数上限
+
+int n1, n2, m;    // n1, n2: 分别表示集合1和集合2的大小，m: 边数
+int h[N], ne[M], e[M], idx;  // h: 邻接表的头部，ne: 存储当前节点的下一条边，e: 存储目标节点，idx: 当前边的编号
+int match[N];      // match: 存储匹配结果，match[i]表示集合2中的第i个节点匹配集合1中的哪个节点
+bool st[N];        // st: 标记集合2中哪些节点在当前递归过程中已被访问过
+
+// 向邻接表中添加一条边
+void add(int a, int b) {
+    e[idx] = b;        // 目标节点是b
+    ne[idx] = h[a];    // 当前节点a的下一条边是h[a]
+    h[a] = idx++;      // 更新节点a的第一条边
+}
+
+// 深度优先搜索，用于寻找增广路径
+bool find(int x) {
+    // 遍历节点x的所有邻接边
+    for(int i = h[x]; ~i; i = ne[i]) {
+        int j = e[i];  // 当前边的目标节点是j
+        if(!st[j]) {    // 如果节点j没有被访问过
+            st[j] = true;  // 标记节点j为已访问
+            // 如果节点j没有匹配或者其已匹配的节点能够找到增广路径，则进行匹配
+            if(!match[j] || find(match[j])) {
+                match[j] = x;  // 将节点x与节点j匹配
+                return true;
+            }
+        }
+    }
+    return false;   // 找不到增广路径
+}
+
+int main() {
+    cin >> n1 >> n2 >> m;    // 输入集合1的大小n1，集合2的大小n2，以及边的数目m
+    memset(h, -1, sizeof h);  // 初始化邻接表，所有表头置为-1
+
+    // 输入边，构建邻接表
+    while(m--) {
+        int a, b;
+        cin >> a >> b;      // 输入一条边，a属于集合1，b属于集合2
+        add(a, b);          // 将边加入邻接表
+    }
+
+    int res = 0;  // 用于统计最大匹配数
+
+    // 对集合1中的每个节点进行匹配
+    for(int i = 1; i <= n1; i++) {
+        memset(st, 0, sizeof st);  // 每次匹配前清空访问标记
+        if(find(i)) res++;         // 如果为当前节点找到增广路径，匹配数加1
+    }
+
+    cout << res << endl;  // 输出最大匹配数
+}
+
 ```
 
