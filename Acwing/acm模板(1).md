@@ -2552,3 +2552,304 @@ int main() {
 
 ```
 
+## 6.贪心
+
+### 区间选点==最大不相交区间数量
+
+```C++
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+const int N = 100010;
+
+struct range {
+    int l, r;
+    
+    bool operator < (const range& W) {
+        return r < W.r;
+    }
+}ranges[N];
+
+int main() {
+    int n;
+    cin >> n;
+    
+    for(int i = 0; i < n; ++i) {
+        int a, b;
+        cin >> a >> b;
+        ranges[i] = {a , b};
+    }
+    
+    sort(ranges, ranges + n);
+    
+    int res = 0, ed = -2e9;
+    
+    for(int i = 0; i < n; ++i) {
+        if(ed < ranges[i].l) {
+            res++;
+            ed = ranges[i].r;
+        }
+    }
+    
+    cout << res;
+    
+    return 0;
+}
+```
+
+### 区间分组
+
+组内区间没交集，求最小组数
+
+```c++
+#include <iostream>
+#include <queue>
+#include <algorithm>
+
+using namespace std;
+
+// 定义一个常量 N，表示范围的最大数量
+const int N = 100010;
+
+// 定义一个结构体 range，用于表示一个区间
+struct range{
+    int l, r;  // l 表示区间的左端点，r 表示区间的右端点
+    // 重载小于运算符，用于对区间按左端点进行排序
+    bool operator < (const range& w) {
+        return l < w.l;
+    }
+}ranges[N];  // 定义一个 range 类型的数组，用于存储所有的区间
+
+int main() {
+    int n;  // 定义一个整数 n，表示区间的数量
+    cin >> n;  // 从标准输入读取区间的数量
+
+    // 循环读取每个区间的左右端点
+    for(int i = 0; i < n ; ++i)  {
+        int a, b;  // 定义两个整数 a 和 b，用于临时存储区间的左右端点
+        cin >> a >> b;  // 从标准输入读取区间的左右端点
+        ranges[i] = {a, b};  // 将读取的区间存储到 ranges 数组中
+    }
+    // 对所有区间按左端点进行排序
+    sort(ranges, ranges + n);
+
+    // 定义一个小顶堆，用于存储每个组的最大右端点
+    priority_queue<int, vector<int>, greater<int>> heap;
+
+    // 遍历每个区间
+    for(int i = 0; i < n; ++i) {
+        auto r = ranges[i];  // 获取当前区间
+        // 如果堆为空或者当前区间的左端点小于等于堆顶元素
+        if(heap.empty() || r.l <= heap.top()) heap.push(r.r);
+        else {
+            // 否则，弹出堆顶元素
+            heap.pop();
+            // 将当前区间的右端点加入堆中
+            heap.push(r.r);
+        }
+    }
+
+    // 输出堆的大小，即最少需要的分组数量
+    cout << heap.size();
+    return 0;
+}
+```
+
+### 区间覆盖
+
+给定 $N$ 个区间 $[a_i, b_i]$ 以及一个区间 $[s, t]$，请你选择尽量少的区间，将指定区间完全覆盖。 输出最少区间数，如果无法完全覆盖则输出 $-1$。
+
+```C++
+#include <iostream>
+#include <algorithm>
+
+using namespace std;
+
+// 定义常量 N 作为区间数组的最大长度
+const int N = 100010;
+
+// 定义区间结构体，包含左端点 l 和右端点 r
+struct range {
+    int l;
+    int r;
+    
+    // 重载小于运算符，用于对区间按左端点进行排序
+    bool operator < (const range& w) {
+        return l < w.l;
+    }
+}ranges[N];
+
+int main() {
+    int n;
+    int st, ed;
+    // 输入目标区间的起始点和结束点
+    cin >> st >> ed;
+    // 输入区间的数量
+    cin >> n;
+    
+    // 循环读取每个区间的左右端点，并存储到 ranges 数组中
+    for(int i = 0; i < n; ++i) {
+        int a, b;
+        cin >> a >> b;
+        ranges[i] = {a, b};
+    }
+    
+    // 对所有区间按照左端点从小到大进行排序
+    sort(ranges, ranges + n);
+    
+    // 标记是否成功覆盖目标区间
+    bool succesed = false;
+    // 记录所需区间的数量
+    int res = 0;
+    
+    // 遍历所有区间
+    for(int i = 0; i < n; ++i) {
+        // 初始化当前能覆盖到的最大右端点为一个极小值
+        int maxr = -2e9;
+        int j;
+        // 从当前区间 i 开始往后找，找到所有左端点小于等于 st 的区间
+        for(j = i; j < n; ++j) {
+            if(st >= ranges[j].l) {
+                // 更新能覆盖到的最大右端点
+                maxr = max(maxr, ranges[j].r);
+            } else {
+                // 如果当前区间的左端点大于 st，停止寻找
+                break;
+            }
+        }
+        
+        // 如果最大右端点小于 st，说明无法继续覆盖，退出循环
+        if(maxr < st)  break;
+        
+        // 每找到一个合适的区间，所需区间数量加 1
+        res++;
+        
+        // 如果最大右端点大于等于目标区间的结束点，说明成功覆盖目标区间
+        if(maxr >= ed) {
+            succesed = true;
+            break;
+        }
+        
+        // 更新 st 为当前能覆盖到的最大右端点，继续寻找下一个区间
+        st = maxr;
+        
+        // 因为内层循环结束时 j 指向第一个左端点大于 st 的区间
+        // 所以将 i 更新为 j - 1，保证下次外层循环从最后一个左端点小于等于 st 的区间开始
+        i = j - 1;
+    }
+    
+    // 如果没有成功覆盖目标区间，将结果设为 -1
+    if(!succesed) res = -1;
+    
+    // 输出所需区间的数量
+    cout << res;
+    
+    return 0;
+}
+```
+
+### 哈夫曼
+
+合并果子
+
+```C++
+#include<iostream>
+#include<algorithm>
+#include<queue>
+using namespace std;
+// 定义一个全局变量 n 用于存储输入数字的数量
+int n;
+int main()
+{
+    // 从标准输入读取数字的数量
+    cin>>n;
+    // 定义一个小顶堆优先队列 q，用于存储输入的数字
+    // priority_queue<int, vector<int>, greater<int>> 表示小顶堆，堆顶元素是最小的
+    priority_queue<int, vector<int>, greater<int>> q;
+    // 循环 n 次，每次读取一个数字并将其加入优先队列
+    while(n--)
+    {
+        int x;
+        // 从标准输入读取一个整数
+        scanf("%d",&x);
+        // 将读取的整数加入优先队列
+        q.push(x);
+    }
+    // 定义一个变量 res 用于存储最终结果，初始化为 0
+    int res = 0;
+    // 当优先队列中的元素数量大于 1 时，继续循环
+    while(q.size()>1)
+    {
+        // 取出优先队列中最小的元素
+        int a = q.top();
+        // 从优先队列中移除最小的元素
+        q.pop();
+        // 取出优先队列中当前最小的元素（原第二小的元素）
+        int b = q.top();
+        // 从优先队列中移除该元素
+        q.pop();
+        // 将取出的两个元素之和累加到结果 res 中
+        res += a + b;
+        // 将两个元素之和重新加入优先队列
+        q.push(a+b);
+    }
+    // 输出最终结果
+    cout<< res <<endl;
+}
+```
+
+### 贪心牛-->叠罗汉
+
+```C++
+#include<iostream>
+#include<algorithm>
+using namespace std;
+// 定义一个整数对类型 PII，用于存储每头牛的相关信息
+typedef pair<int ,int> PII;
+// 定义常量 N，表示牛的最大数量
+const int  N = 50010;
+// 定义变量 n，用于存储实际输入的牛的数量
+int n;
+// 定义一个 PII 类型的数组 cow，用于存储每头牛的信息
+PII cow[N];
+
+int main()
+{
+    // 从标准输入读取牛的数量
+    cin>>n;
+    // 循环读取每头牛的重量和强壮度信息
+    for(int i = 0; i < n; i++)
+    {
+        int s,w;
+        // 读取当前牛的重量 w 和强壮度 s
+        cin>>w>>s;
+        // 将每头牛的 s + w 和 w 信息存储到数组中
+        // 这里用 s + w 作为排序的依据，后续解释
+        cow[i]={s+w,w};
+    }
+    // 对存储牛信息的数组进行排序，按照 s + w 从小到大排序
+    sort(cow,cow+n);
+
+    // 初始化结果变量 res 为一个极小值，用于存储最大的风险值
+    int res = -2e9;
+    // 初始化 sum 为 0，用于记录当前已经堆叠的牛的总重量
+    int sum = 0;
+    // 遍历排序后的牛信息数组
+    for(int i = 0; i < n; i++)
+    {
+        // 从当前牛的信息中提取出强壮度 s 和重量 w
+        // 因为存储的是 {s + w, w}，所以 s = (s + w) - w
+        int s = cow[i].first - cow[i].second, w = cow[i].second;
+        // 计算当前牛的风险值（已经堆叠的牛的总重量减去当前牛的强壮度）
+        // 并更新最大风险值 res
+        res = max(res, sum - s);
+        // 将当前牛的重量累加到总重量 sum 中
+        sum +=w;
+    }
+    // 输出最大风险值
+    cout<<res<<endl;
+}
+```
+
