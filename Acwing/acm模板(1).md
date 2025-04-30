@@ -2344,7 +2344,9 @@ int main()
 }
 ```
 
-### 并查集实现
+### 并查集STL实现
+
+路径压缩
 
 ```c++
 class UnionFindSet
@@ -2364,8 +2366,8 @@ public:
 		{
 			return;
 		}
-		//我们姑且默认往小的下标中合并，这里我们随意，也可以不加
-		if (root1 > root2)
+		//数据量小的往大的合并
+		if (abs(_ufs[root1]) < abs(_ufs[root2]))
 		{
 			swap(root1, root2);
 		}
@@ -2375,12 +2377,19 @@ public:
 	//寻找某一个元素的根节点下标
 	int FindRoot(int x)
 	{
-		int parent = x;
-		while (_ufs[parent] >= 0)
+		int root = x;
+		while (_ufs[root] >= 0)
 		{
-			parent = _ufs[parent];
+			root = _ufs[root];
 		}
-		return parent;
+        //路径压缩
+		while (_ufs[x] >= 0)
+		{
+			int parent = _ufs[x];
+			_ufs[x] = root;
+			x = parent;
+		}
+		return root;
 	}
 	//判断是否在一个集合中
 	bool InSet(int x1, int x2)
@@ -2403,6 +2412,19 @@ public:
 private:
 	vector<int> _ufs;
 };
+
+void TestUnionFindSet()
+{
+	UnionFindSet ufs(10);
+	ufs.Union(8, 9);
+	ufs.Union(7, 8);
+	ufs.Union(6, 7);
+	ufs.Union(5, 6);
+	ufs.Union(4, 5);
+
+	ufs.FindRoot(9);
+}
+
 
 ```
 
@@ -2850,6 +2872,218 @@ int main()
     }
     // 输出最大风险值
     cout<<res<<endl;
+}
+```
+
+## 7.并查集简单实现
+
+1.将两个集合合并
+
+2.查看两个元素是否在同一个集合中
+
+> 一共有 `n` 个数，编号是 `1 ~ n`，最开始每个数各自在一个集合中。 现在要进行 `m` 个操作，操作共有两种： 1. `M a b` ，将编号为 `a` 和 `b` 的两个数所在的集合合并，如果两个数已经在同一个集合中，则忽略这个操作； 2. `Q a b` ，询问编号为 `a` 和 `b` 的两个数是否在同一个集合中。 
+
+```C++
+#include <iostream>
+
+using namespace std;
+
+// 定义常量 N，作为数组的最大长度
+const int N = 100010;
+
+// 定义数组 p，用于存储每个元素的父节点
+int p[N];
+
+// 查找元素 x 所在集合的代表元素（根节点），并进行路径压缩
+int find(int x) {
+    // 如果 x 的父节点不是自身，递归查找并更新其父节点为根节点
+    if(p[x] != x) p[x] = find(p[x]);
+    // 返回 x 所在集合的根节点
+    return p[x];
+}
+
+int main() {
+    // n 表示元素的数量，m 表示操作的次数
+    int n, m;
+    // 从标准输入读取 n 和 m 的值
+    cin >> n >> m;
+    
+    // 初始化并查集，每个元素的父节点是其自身
+    for(int i = 1; i <= n; ++i) p[i] = i;
+    
+    // 循环 m 次，处理每一个操作
+    while(m--) {
+        // c 表示操作类型，a 和 b 是操作涉及的元素
+        char c;
+        int a, b;
+        // 从标准输入读取操作类型和操作涉及的元素
+        cin >> c >> a >> b;
+        // 如果操作类型是 'M'，表示合并操作
+        if(c == 'M') p[find(a)] = find(b);
+        // 否则为查询操作
+        else {
+            // 判断 a 和 b 是否在同一个集合中
+            if(find(a) == find(b)) cout << "Yes" << endl;
+            else cout << "No" << endl;
+        }
+    }
+    return 0;
+}
+```
+
+### 连通块个数
+
+```c++
+#include<iostream>
+#include<string>
+using namespace std;
+// 定义常量 N，为数组最大长度，这里是 100006
+const int N =1e5+6;
+// h 数组用于存储每个元素的父节点，用于实现并查集
+int h[N], 
+// cnt 数组用于记录每个集合中元素的数量
+    cnt[N]; 
+// n 表示元素的数量，m 表示操作的次数
+int n,m; 
+
+// 查找元素 x 所在集合的代表元素（根节点），并进行路径压缩
+int find(int x)
+{
+    // 如果 x 的父节点不是自身，递归查找并更新其父节点为根节点
+    if(h[x]!=x) h[x]=find(h[x]);
+    // 返回 x 所在集合的根节点
+    return h[x];
+}
+
+int main()
+{
+    // 从标准输入读取元素数量 n 和操作次数 m
+    cin>>n>>m;
+    // 初始化并查集和每个集合的元素数量
+    for(int i=1;i<=n;i++)
+    {
+        // 初始时每个元素的父节点是其自身
+        h[i]=i;
+        // 初始时每个集合只有一个元素
+        cnt[i]=1;
+    }
+    // 循环 m 次，处理每一个操作
+    while(m--)
+    {
+        // op 存储操作类型
+        string op;
+        // a 和 b 是操作涉及的元素
+        int a,b;
+        // 从标准输入读取操作类型
+        cin>>op;
+        // 如果操作类型是 "C"，表示合并操作
+        if(op=="C")
+        {
+            // 读取要合并的两个元素
+            cin>>a>>b;
+            // 找到 a 和 b 所在集合的根节点
+            a=find(a),b=find(b);
+            // 如果 a 和 b 不在同一个集合中
+            if(a!=b)
+            {
+                // 将 a 所在集合合并到 b 所在集合
+                h[a]=b;
+                // 更新 b 所在集合的元素数量
+                cnt[b]+=cnt[a];
+            }
+        }
+        // 如果操作类型是 "Q1"，表示查询两个元素是否在同一集合
+        else if(op=="Q1")
+        {
+            // 读取要查询的两个元素
+            cin>>a>>b;
+            // 判断 a 和 b 是否在同一个集合中
+            if(find(a)==find(b))
+                // 若在同一集合，输出 "Yes"
+                puts("Yes");
+            else
+                // 若不在同一集合，输出 "No"
+                puts("No");
+        }
+        // 其他操作类型，查询某个元素所在集合的元素数量
+        else
+        {
+            // 读取要查询的元素
+            cin>>a;
+            // 输出该元素所在集合的元素数量
+            cout<<cnt[find(a)]<<endl;
+        }
+        
+    }
+    return 0;
+}
+```
+
+### 食物链
+
+
+
+```cpp
+#include <iostream>
+using namespace std;
+
+const int N = 50010;
+
+int p[N];
+int d[N];
+int n, k;
+int find(int x)
+{
+    if(p[x] != x)
+    {
+        int u = find(p[x]);
+        d[x] += d[p[x]];
+        p[x] = u;
+    }
+    return p[x];
+}
+int main()
+{
+    cin >> n >> k;
+    for(int i = 0; i < n; i++)
+    {
+        p[i] = i;
+    }
+    int res = 0;
+    while(k--)
+    {
+        int D, x, y;
+        cin >> D >> x >> y;
+        
+        if(x > n || y > n)
+        {
+            res++;
+        }
+        else 
+        {
+            int px = find(x), py = find(y);
+            if(D == 1)
+            {
+                if(px == py && (d[x] - d[y]) % 3) res ++;
+                else if(px != py)
+                {
+                    p[px] = py;
+                    d[px] = d[y] - d[x];
+                }
+            }
+            else 
+            {
+                if(px == py && (d[x] - d[y] - 1) % 3) res++;
+                else if(px != py)
+                {
+                    p[px] = py;
+                    d[px] = d[y] + 1 - d[x];
+                }
+            }
+        }
+    }
+    cout << res;
+    return 0;
 }
 ```
 
